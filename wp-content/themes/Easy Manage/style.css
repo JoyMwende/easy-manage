@@ -1,0 +1,727 @@
+/*
+    Theme Name: Eazzy Manage
+    Theme URI: http://eazzymanage.org
+    Author: Joy Mwende
+    Version: 1.0.1
+    Author URI: http://eazzymanage.com
+    Description: This is the new custom theme
+    License: GNU General Public Licence
+    Licence URI: https://wordpress.org/about/license/
+    Tags: responsiveness, e-commerce, custom-menu, footer, custom-logo
+*/
+
+/* common styles */
+h1, h2, h3, h4, h5, h6{
+    /* font-family: 'Poppins', sans-serif; */
+    color: #061112;
+}
+p{
+    color: #5B5656;
+    font-size: 16px;
+}
+textarea{
+    border-radius: 5px;
+    border: 1px solid #EBEBEB;
+}
+.search-bar {
+    display: flex;
+    gap: 10px;
+    background-color: #c2bfbf;
+    width: 30vw;
+    margin-left: 30vw;
+    height: 38px;
+    border: none;
+    border-radius: 6px;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.search-bar input{
+    background-color: #c2bfbf;
+    color: #061112;
+    width: 25vw;
+    height: 35px;
+    border: none;
+}
+.search-bar img {
+    width: 20px;
+    height: 20px;
+    margin-left: 10px;
+}
+table{
+    margin-top: 20px;
+}
+.logoutform{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #5B5656;
+}
+.logout{
+    border: none;
+    background-color: #fff;
+}
+
+/* footer */
+.footer{
+    background-color: #fff;
+    text-align: center;
+}
+
+/* login page */
+.login-container, .container{
+    background-color: #fff;
+}
+.login-content, .add-content{
+    width: 40vw;
+    border-radius: 10px;
+    margin: auto;
+    margin-top: 15vh;
+    border: 1px solid #EBEBEB;
+}
+.login-content h2{
+    color: #061112;
+    font-weight: bold;
+    font-size: 24px;
+}
+.form-content{
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 1rem;
+    font-size: 16px;
+}
+.login-field label, .add-field label{
+    color: #061112;
+    font-size: 16px;
+    font-weight: 500;
+}
+.input input, .input select{
+    width: 35vw;
+    height: 40px;
+    border-radius: 5px;
+    border: 1px solid #EBEBEB;
+    padding: 0.5rem;
+    font-size: 16px;
+    font-weight: 400;
+    color: #5B5656;
+}
+.login-btn button, .add-btn button{
+    background-color: #43B9B0;
+    color: #fff;
+    cursor: pointer;
+    border: none;
+    height: 40px;
+    width: 13vw;
+    margin-left: 10vw;
+    font-weight: 500;
+}
+@media screen and (max-width: 900px){
+    .add-field input{
+        width: 34.2vw;
+    }
+}
+
+@media screen and (max-width: 780px) {
+    .login-content{
+        width: 50vw;
+    }
+    .input input{
+        width: 43vw;
+    }
+    .login-btn button{
+        width: 20vw;
+    }
+    .add-field input{
+        width: 34.2vw;
+    }
+}
+@media screen and (max-width: 680px){
+    .add-field input{
+        width: 32vw;
+    }
+}
+@media screen and (max-width: 530px) {
+    .login-content{
+        width: 70vw;
+    }
+    .input input{
+        width: 60vw;
+    }
+    .login-btn button{
+        width: 30vw;
+    }
+    .add-field input{
+        width: 33vw;
+    }
+}
+
+
+
+
+
+/* trainee dashboard */
+.page{
+    background-color: #EEEEEE;
+    display: flex;
+    justify-content: space-between;
+    padding-top: 10px;
+    gap: 8px;
+}
+.sidebar{
+    width: 20vw;
+    background-color: #fff;
+    height: 90vh;
+    margin-left: 5px;
+    border-radius: 10px;
+    height: 140vh;
+    margin-bottom: 10px;
+}
+.logo{
+    padding: 10px 20px;
+}
+.logo h2{
+    color: #061112;
+    font-weight: bold;
+    font-size: 24px;
+    margin-left: 1rem;
+}
+.sidebar-content{
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+.sidebar a{
+    text-decoration: none;
+}
+.sidebar-content p, .sidebar-content input{
+    color: #000;
+    font-size: 16px;
+    font-weight: 500;
+    text-decoration: none;
+}
+.current-page{
+    background-color: #EAF1EF;
+}
+.current-page p{
+    color: #061112;
+    font-weight: 600;
+}
+.current-page, .trainee-dash{
+    display: flex;
+    justify-content: flex-start;
+    width: 17vw;
+    margin: auto;
+    gap: 7px;
+    padding-top: 10px;
+    /* align-items: center; */
+    padding-left: 5px;
+}
+.current-page img, .trainee-dash img{
+    width: 25px;
+    height: 25px;
+}
+.sidebar-line{
+    background-color: #c2bfbf;
+    height: 1px;
+}
+
+
+.page-content{
+    width: 77vw;
+    background-color: #fff;
+    border: hidden;
+    border-radius: 20px;
+    margin-right: 5px;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+}
+
+.trainee-nav{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    height: 10vh;
+    padding-top: 40px;
+}
+.account{
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 1rem;
+    margin-right: 1rem;
+}
+.account img{
+    width: 25px;
+    height: 25px;
+}
+hr{
+    background-color: #c2bfbf;
+}
+
+.trainee-content{
+    border-radius: 5px;
+    width: 77vw;
+    gap: 10px;
+    display: grid;
+    grid-template-columns: repeat(3, 24.7vw);
+}
+.tasks-count-box{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-left: 10px;
+}
+.tasks-count{
+    display: flex;
+    align-items: center;
+    padding: 5px 10px 5px;
+    gap: 10px;
+    box-shadow: 3px 3px 3px 3px rgb(151, 150, 150);
+}
+.tasks-img{
+    background-color: #E4F8ED;
+    border: hidden;
+    border-radius: 50%;
+    width: 65px;
+    height: 65px;
+}
+.tasks-img img{
+    height: 40px;
+    width: 40px;
+    padding-left: 18px;
+    padding-top: 18px;
+}
+.tasks-nums{
+    width: 75%;
+}
+.tasks-nums h3{
+    font-size: 20px;
+}
+
+.tasks-analysis{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+    box-shadow: 3px 3px 3px 3px rgb(151, 150, 150);
+    padding: 15px;
+    gap: 10px;
+}
+.big-circle{
+    width: 13vw;
+    height: 24vh;
+    background-color: #286F6A;
+    border: hidden;
+    border-radius: 50%;
+    padding-top: 2vh;
+}
+.small-circle{
+    width: 10vw;
+    height: 20vh;
+    background-color: #fff;
+    border: hidden;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin: auto;
+}
+.taskscountcolor{
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;    
+}
+.taskscolor1{
+    width: 20px;
+    height: 20px;
+    background-color: #43B9B0;
+    border: none;
+}
+.taskscolor2{
+    width: 20px;
+    height: 20px;
+    background-color: #286F6A;
+    border: none;
+}
+@media screen and (max-width: 1115px) {
+    .trainee-content{
+        grid-template-columns: repeat(3, 24.5vw);
+    }
+}
+@media screen and (max-width: 1000px) {
+    .trainee-content{
+        grid-template-columns: repeat(2, 37.2vw);
+    }
+}
+@media screen and (max-width: 768px) {
+    .big-circle{
+        width: 18vw;
+        height: 20vh;
+        background-color: #286F6A;
+        border: hidden;
+        border-radius: 50%;
+        padding-top: 3vh;
+    }
+    .small-circle{
+        width: 12vw;
+        height: 14vh;
+        background-color: #fff;
+        border: hidden;
+        border-radius: 50%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        margin: auto;
+    }
+    .trainee-content{
+        grid-template-columns: repeat(2, 37vw);
+    }
+}
+@media screen and (max-width: 675px) {
+    .trainee-content{
+        grid-template-columns: repeat(1, 70vw);
+    }
+}
+
+@media screen and (max-width: 660px) {
+    .sidebar-content p{
+        display: none;
+    }
+    .sidebar img{
+        width: 40px;
+        height: 40px;
+    }
+    .current-page, .trainee-dash{
+        justify-content: center;
+        align-items: center;
+        padding-bottom: 8px;
+    }
+    .sidebar-content:hover p{
+        display: block;
+    }
+    .sidebar {
+        width: 200px;
+        transition: width 0.3s ease; 
+    }
+    
+    .sidebar:hover {
+        width: 250px;
+    }
+    
+    .sidebar p {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .trainee-welcome-text p{
+        display: none;
+    }
+    .account-new{
+        flex-direction: column;
+    }
+}
+
+.newest-tasks{
+    /* width: 45vw; */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 15px;
+    box-shadow: 3px 3px 3px 3px rgb(151, 150, 150);
+}
+.newest{
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+}
+.newest img{
+    width: 20px;
+    height: 20px;
+}
+
+.recent-tasks{
+    width: 74vw;
+    padding: 15px;
+    margin-top: 40px;
+}
+
+
+/* assigned-tasks-page */
+.assigned-tasks-table{
+    margin: 20px;
+}
+.tasksbtn button, .tasksmodifybtn button{
+    width: 140px;
+    height: 35px;
+    background-color: #E4F8ED;
+    color: #061112;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    display: flex;
+    gap: 7px;
+    justify-content: center;
+    align-items: center;
+}
+.tasksbtn img, .taskscompletebtn img, .tasksmodifybtn img{
+    width: 20px;
+    height: 20px;
+}
+.tasks-body a:hover{
+    background-color: #686767;
+}
+ 
+
+/* trainee single task page */
+.trainee-single-task{
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding: 15px;
+    gap: 20px;
+}
+.duedate, .status{
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    align-items: center;
+}
+.taskscompletebtn button{
+    width: 220px;
+    height: 35px;
+    background-color: #E4F8ED;
+    color: #061112;
+    cursor: pointer;
+    border: none;
+    border-radius: 5px;
+    display: flex;
+    gap: 7px;
+    justify-content: center;
+    align-items: center;
+}
+
+
+
+
+/* trainer dashboard */
+.main-sidebar-content{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    /* gap: 60px; */
+}
+.btnadd button{
+    background-color: #43B9B0;
+    color: #fff;
+    cursor: pointer;
+    border: hidden;
+    width: 150px;
+    height: 45px;
+}
+.btnadd img{
+    width: 25px;
+    height: 25px;
+}
+.account-new{
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 1rem;
+    margin-left: 1rem;
+}
+.account-new img{
+    width: 40px;
+    height: 40px;
+}
+
+/* trainer single task page */
+.tasksmodifybtn{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+}
+
+/* project manager dashboard */
+.new-tasks-count-box{
+    display: grid;
+    grid-template-columns: repeat(3, 330px);
+    gap: 20px;
+    margin-left: 10px;
+}
+.new-tasks-count{
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    height: 30vh;
+    padding: 20px;
+}
+
+@media screen and (max-width: 1115px) {
+    .new-tasks-count-box{
+        grid-template-columns: repeat(3, 23.8vw);
+    }
+}
+
+@media screen and (max-width: 1000px) {
+    .new-tasks-count-box{
+        grid-template-columns: repeat(3, 23.5vw);
+    }
+}
+
+@media screen and (max-width: 900px) {
+    .new-tasks-count-box{
+        gap: 10px;
+    }
+}
+
+@media screen and (max-width: 680px) {
+    .new-tasks-count-box{
+        grid-template-columns: repeat(2, 35vw);
+    }
+}
+
+@media screen and (max-width: 620px) {
+    .new-tasks-count-box{
+        grid-template-columns: repeat(2, 33vw);
+    }
+}
+
+@media screen and (max-width: 545px) {
+    .new-tasks-count-box{
+        grid-template-columns: repeat(2, 32vw);
+    }
+}
+
+@media screen and (max-width: 520px) {
+    .new-tasks-count-box{
+        grid-template-columns: repeat(1, 65vw);
+    }
+}
+
+@media screen and (max-width: 491px) {
+    .new-tasks-count-box{
+        grid-template-columns: repeat(1, 60vw);
+    }
+}
+
+@media screen and (max-width: 427px) {
+    .new-tasks-count-box{
+        grid-template-columns: repeat(1, 55vw);
+    }
+}
+
+@media screen and (max-width: 380px) {
+    .new-tasks-count-box{
+        grid-template-columns: repeat(1, 45vw);
+    }
+}
+
+
+/* admin dashboard */
+.admin-content{
+    border-radius: 5px;
+    /* display: flex; */
+    width: 77vw;
+    gap: 20px;
+    display: grid;
+    grid-template-columns: repeat(4, 250px);
+}
+.admin-tasks-count-box{
+    display: grid;
+    grid-template-columns: repeat(4, 250px);
+    gap: 10px;
+    margin-left: 10px;
+}
+.admin-tasks-count{
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    height: 25vh;
+    padding: 20px;
+}
+
+
+.add-btn-pm button{
+    background-color: #43B9B0;
+    color: #fff;
+    cursor: pointer;
+    border: none;
+    height: 40px;
+    width: 17vw;
+    margin-left: 10vw;
+    font-weight: 500;
+}
+
+@media screen and (max-width: 1115px) {
+    .admin-content{
+        grid-template-columns: repeat(3, 24.5vw);
+    }
+    .admin-tasks-count-box{
+        grid-template-columns: repeat(3, 24.5vw);
+    }
+}
+
+@media screen and (max-width: 1000px) {
+    .admin-content{
+        grid-template-columns: repeat(3, 24vw);
+    }
+    .admin-tasks-count-box{
+        grid-template-columns: repeat(3, 24vw);
+    }
+}
+
+@media screen and (max-width: 850px) {
+    .admin-content{
+        grid-template-columns: repeat(2, 36.2vw);
+    }
+    .admin-tasks-count-box{
+        grid-template-columns: repeat(2, 36.2vw);
+        gap: 15px;
+    }
+}
+
+@media screen and (max-width: 720px) {
+    .admin-content{
+        grid-template-columns: repeat(2, 35.8vw);
+    }
+    .admin-tasks-count-box{
+        grid-template-columns: repeat(2, 35.8vw);
+        gap: 15px;
+    }
+}
+
+@media screen and (max-width: 684px) {
+    .admin-content{
+        grid-template-columns: repeat(2, 35vw);
+    }
+    .admin-tasks-count-box{
+        grid-template-columns: repeat(2, 35vw);
+        gap: 15px;
+    }
+}
+
+@media screen and (max-width: 600px) {
+    .admin-content{
+        grid-template-columns: repeat(1, 70vw);
+    }
+    .admin-tasks-count-box{
+        grid-template-columns: repeat(1, 70vw);
+        gap: 15px;
+    }
+}
+   

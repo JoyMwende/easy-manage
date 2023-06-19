@@ -1,0 +1,18 @@
+{
+    "name": "user/easy-manage",
+    "description": "This is a plugin for eazzy manage utilizing composer",
+    "type": "project",
+    "license": "GPLv2 or Later",
+    "authors": [
+        {
+            "name": "Joy Mwende"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Inc\\": "./inc"
+        }
+    }
+}
