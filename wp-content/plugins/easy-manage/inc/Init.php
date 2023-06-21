@@ -17,7 +17,8 @@
                 Pages\AdminRoutes::class,
                 Pages\TraineeRoutes::class,
                 Pages\TrainerRoutes::class,
-                Pages\PmRoutes::class
+                Pages\PmRoutes::class,
+                Pages\Tables::class
             ];
         }
     

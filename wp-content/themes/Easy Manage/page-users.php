@@ -57,6 +57,11 @@ $query = "
 
 $users = $wpdb->get_results($query);
 
+$user_logged_in = wp_get_current_user();
+$user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
+    FROM {$wpdb->users} AS users
+    LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
+    LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE id = $user_logged_in->ID")
 
 
 ?>
@@ -114,14 +119,14 @@ $users = $wpdb->get_results($query);
         <div class="main-trainee-nav">
             <nav class="trainee-nav">
                 <div class="trainee-welcome-text">
-                    <h3>Welcome, admin</h3>
+                    <h3>Welcome, <?php echo $user_logged_in->user_login; ?></h3>
                     <p>Today is Saturday, 10 June 2023</p>
                 </div>
                 <div class="account">
                     <img src="<?php echo $account; ?>" alt="">
                     <div class="profile">
-                        <h4>admin</h4>
-                        <p>admin</p>
+                        <h4><?php echo $user_logged_in->user_login; ?></h4>
+                        <p><?php echo $user_logged_in->user_login; ?></p>
                     </div>
                 </div>
             </nav>

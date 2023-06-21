@@ -12,6 +12,7 @@ $dashboardDark = get_template_directory_uri() . "/assets/dashboard-dark.png";
 $tasksListDark = get_template_directory_uri() . "/assets/tasks-list-dark.png";
 $traineesDark = get_template_directory_uri() . "/assets/trainees-dark.png";
 $trainersDark = get_template_directory_uri() . "/assets/trainer-dark.png";
+$addTraineeDark = get_template_directory_uri() . "/assets/add-user-dark.png";
 $plus = get_template_directory_uri() . "/assets/add.png";
 $logoutDark = get_template_directory_uri() . "/assets/logout-dark.png";
 $account = get_template_directory_uri() . "/assets/account.png";
@@ -39,11 +40,13 @@ global $wpdb;
 $table = $wpdb->prefix . 'tasks';
 $task_data = "CREATE TABLE IF NOT EXISTS " . $table . " (
     id int NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `task-title` text NOT NULL,
-    `task-desc` text NOT NULL,
-    `trainee` text NOT NULL,
-    `trainee-select` text NOT NULL,
-    `duedate` text NOT NULL
+    task-title text NOT NULL,
+    task-desc text NOT NULL,
+    trainee text NOT NULL,
+    trainee-select text NOT NULL,
+    duedate text NOT NULL,
+    created_by text NOT NULL,
+    is_deleted int DEFAULT 0
 );";
 require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 dbDelta($task_data);
@@ -73,6 +76,9 @@ if (isset($_POST['createtaskbtn'])) {
         $dueDate = test_input($_POST['duedate']);
     }
 
+    $loggged_in_user = wp_get_current_user();
+    $created_by = $loggged_in_user->user_email;
+    
     if (!$taskTitleError && !$taskDescError && !$traineeError && !$dueDateError) {
         $tasks = array(
             'task-title' => $taskTitle,
@@ -80,6 +86,7 @@ if (isset($_POST['createtaskbtn'])) {
             'trainee' => $trainee,
             'trainee-select' => $traineeSelect,
             'duedate' => $dueDate,
+            'created_by' => $created_by,
         );
 
         $newtask = $wpdb->insert($table, $tasks);
@@ -108,18 +115,90 @@ $query = "
 
 $users = $wpdb->get_results($query);
 
+$user_logged_in = wp_get_current_user();
+$user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
+    FROM {$wpdb->users} AS users
+    LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
+    LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE id = $user_logged_in->ID")
+
+
 ?>
 
 <?php get_header(); ?>
 
 <div class="page">
-    <div class="sidebar">
-        <!-- Sidebar content here -->
+<div class="sidebar">
+        <div class="logo">
+            <a href="#">
+                <h3>Eazzy Manage</h3>
+            </a>
+        </div>
+        <div class="main-sidebar-content">
+            <div class="sidebar-content">
+                <article>
+                    <a href="/easy-manage/trainer-dashboard" class="trainee-dash">
+                        <img src="<?php echo $dashboardDark ?>" alt="">
+                        <p>Dashboard</p>
+                    </a>
+                </article>
+                <article>
+                    <a href="/easy-manage/tasks-list" class="trainee-dash">
+                        <img src="<?php echo $tasksListDark; ?>" alt="">
+                        <p>Tasks List</p>
+                    </a>
+                </article>
+                <article>
+                    <a href="/easy-manage/trainees" class="trainee-dash">
+                        <img src="<?php echo $traineesDark; ?>" alt="">
+                        <p>Trainees</p>
+                    </a>
+                </article>
+                <article>
+                    <a href="/easy-manage/add-trainee" class="trainee-dash">
+                        <img src="<?php echo $addTraineeDark; ?>" alt="">
+                        <p>Add Trainee</p>
+                    </a>
+                </article>
+                <div class="sidebar-line"></div>
+                <article>
+                    <a href="#" class="trainee-dash">
+                    <form action="" method="POST">
+                            <div class="logoutform">
+                                <img src="<?php echo $logoutDark; ?>" alt="">
+                                <input class="logout" name="logout" type="submit" value="Logout">
+                            </div>
+                        </form>
+                    </a>
+                </article>
+            </div>
+            <div class="account-new">
+                    <img src="<?php echo $account; ?>" alt="">
+                    <div class="profile">
+                        <h5><?php echo $user_logged_in->user_login; ?></h5>
+                        <p><?php echo $user_role->role; ?></p>
+                    </div>
+            </div>
+        </div>
     </div>
+
 
     <div class="page-content">
         <div class="main-trainee-nav">
-            <!-- Main navigation content here -->
+            <nav class="trainee-nav">
+                <div class="trainee-welcome-text">
+                    <h3>Welcome, <?php echo $user_logged_in->user_login; ?></h3>
+                    <p><?php
+                        $current_date = date('l, j F Y');
+                        echo "Today is " . $current_date;
+                    ?></p>
+                </div>
+                <div class="btnadd">
+                    <a href="/easy-manage/add-task"><button type="submit">
+                        <img src="<?php echo $plus; ?>" alt="">
+                        New Project
+                    </button></a>
+                </div>
+            </nav>
         </div>
 
         <hr>

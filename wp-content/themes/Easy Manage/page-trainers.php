@@ -25,6 +25,7 @@ if(isset($_POST['logout'])){
 
 global $wpdb;
 
+
 $query = "
         SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
         FROM {$wpdb->users} AS users
@@ -33,6 +34,13 @@ $query = "
     ";
 
 $trainers = $wpdb->get_results($query);
+
+$user_logged_in = wp_get_current_user();
+$user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
+    FROM {$wpdb->users} AS users
+    LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
+    LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE id = $user_logged_in->ID")
+
 
 ?>
 <?php get_header(); ?>
@@ -85,8 +93,8 @@ $trainers = $wpdb->get_results($query);
             <div class="account-new">
                 <img src="<?php echo $account; ?>" alt="">
                 <div class="profile">
-                    <h5>Joy</h5>
-                    <p>Project Manager</p>
+                    <h5><?php echo $user_logged_in->user_login; ?></h5>
+                    <p><?php echo $user_role->role; ?></p>
                 </div>
             </div>
         </div>
@@ -97,8 +105,11 @@ $trainers = $wpdb->get_results($query);
         <div class="main-trainee-nav">
             <nav class="trainee-nav">
                 <div class="trainee-welcome-text">
-                    <h3>Welcome, Joy</h3>
-                    <p>Today is Saturday, 10 June 2023</p>
+                    <h3>Welcome, <?php echo $user_logged_in->user_login; ?></h3>
+                    <p><?php
+                        $current_date = date('l, j F Y');
+                        echo "Today is " . $current_date;
+                    ?></p>
                 </div>
                 <div class="btnadd">
                     <a href="/easy-manage/add-trainer"><button type="submit">

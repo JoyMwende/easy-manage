@@ -71,37 +71,58 @@ function validate_login_form()
     if (isset($_POST['loginbtn'])) {
         $email = $_POST['email'];
         $password = $_POST['password'];
-
-        $user = wp_authenticate($email, $password);
-
-        if (is_wp_error($user)) {
-            echo $user->get_error_message();
-        } else {
-            if ($user->user_login == 'admin') {
-                wp_set_current_user($user->ID, $user->user_login);
-                wp_set_auth_cookie($user->ID);
-                do_action('wp_login', $user->user_login);
-                wp_redirect('/easy-manage/admin-dashboard');
-            } else if ($user->user_login == 'Project Manager') {
-                wp_set_current_user($user->ID, $user->user_login);
-                wp_set_auth_cookie($user->ID);
-                do_action('wp_login', $user->user_login);
-                wp_redirect('/easy-manage/project-manager-dashboard');
-            } else if ($user->user_login == 'Trainer') {
-                wp_set_current_user($user->ID, $user->user_login);
-                wp_set_auth_cookie($user->ID);
-                do_action('wp_login', $user->user_login);
-                wp_redirect('/easy-manage/trainer-dashboard');
-            } else if ($user->user_login == 'Trainee') {
-                wp_set_current_user($user->ID, $user->user_login);
-                wp_set_auth_cookie($user->ID);
-                do_action('wp_login', $user->user_login);
-                wp_redirect('/easy-manage/trainee-dashboard');
-            } else {
+    
+        global $wpdb;
+    
+        $query = "
+            SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
+            FROM {$wpdb->users} AS users
+            LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
+            LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role'
+            WHERE users.user_email = %s
+        ";
+    
+        $prepared_query = $wpdb->prepare($query, $email);
+        $users_data = $wpdb->get_row($prepared_query);
+    
+        if ($users_data) {
+            $user = wp_authenticate($email, $password);
+    
+            if (is_wp_error($user)) {
                 echo 'Invalid login credentials';
+            } else {
+                wp_set_current_user($user->ID, $user->user_login);
+                wp_set_auth_cookie($user->ID);
+                do_action('wp_login', $user->user_login);
+    
+                $role = $users_data->role[0]; // Access the role value correctly
+    
+                switch ($role) {
+                    case 'admin':
+                        wp_redirect('/easy-manage/admin-dashboard');
+                        break;
+                    case 'Project Manager':
+                        wp_redirect('/easy-manage/project-manager-dashboard');
+                        break;
+                    case 'Trainer':
+                        wp_redirect('/easy-manage/trainer-dashboard');
+                        break;
+                    case 'Trainee':
+                        wp_redirect('/easy-manage/trainee-dashboard');
+                        break;
+                    default:
+                        echo 'Invalid login credentials';
+                        break;
+                }
+    
+                exit; 
             }
+        } else {
+            echo 'Invalid login credentials';
         }
     }
+    
+    
 
     // Display the login form with validation errors
     $login = '';
@@ -162,10 +183,15 @@ function addTrainee($attrs)
     $cohort = '';
     $password = '';
 
+    global $wpdb;
+
     global $successmsg;
     global $errormsg;
     $successmsg = false;
     $errormsg = false;
+
+    $loggged_in_user = wp_get_current_user();
+    $user_logged_data = $loggged_in_user->user_email;
 
 
     if (isset($_POST['createtraineebtn'])) {
@@ -175,6 +201,7 @@ function addTrainee($attrs)
         $role = $_POST['role'];
         $password = $_POST['password'];
         $cohort = $_POST['cohort'];
+        $created_by = $user_logged_data;
 
         if (empty($firstname)) {
             $firstnameError = "First Name is required!";
@@ -221,6 +248,7 @@ function addTrainee($attrs)
             update_user_meta($user_id, 'last_name', $lastname);
             update_user_meta($user_id, 'role', $role);
             update_user_meta($user_id, 'cohort', $cohort);
+            update_user_meta($user_id, 'created_by', $created_by);
 
             $user = wp_signon([
                 'user_login' => $email,
@@ -244,7 +272,16 @@ function addTrainee($attrs)
         // if (empty($emailError) && empty($passwordError)) {
         //     wp_redirect('/easy-manage/trainee-dashboard');
         // }
+
+        $user_logged_in = wp_get_current_user();
+    $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
+    FROM {$wpdb->users} AS users
+    LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
+    LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE id = $user_logged_in->ID");
+
     }
+
+    
 
     $addTrainee = '';
     $addTrainee .= '<div class="page">
@@ -295,8 +332,8 @@ function addTrainee($attrs)
                                 <div class="account-new">
                                         <img src=' . $account . ' alt="">
                                         <div class="profile">
-                                            <h5>Janice</h5>
-                                            <p>Trainer</p>
+                                            <h5>' . $user_logged_in->user_login . '</h5>
+                                            <p>' . $user_role->role . '</p>
                                         </div>
                                 </div>
                             </div>
@@ -307,8 +344,10 @@ function addTrainee($attrs)
                             <div class="main-trainee-nav">
                                 <nav class="trainee-nav">
                                     <div class="trainee-welcome-text">
-                                        <h3>Welcome, Janice</h3>
-                                        <p>Today is Saturday, 10 June 2023</p>
+                                        <h3>Welcome, ' . $user_logged_in->user_login . '</h3>
+                                        <p>' .
+                                        $current_date = date('l, j F Y');
+                                        echo "Today is " . $current_date . '</p>
                                     </div>
                                     <div class="btnadd">
                                         <a href="/easy-manage/add-task/"><button type="submit">
@@ -443,12 +482,16 @@ function addTrainer($attrs)
     $successmsg = false;
     $errormsg = false;
 
+    $loggged_in_user = wp_get_current_user();
+    $user_logged_data = $loggged_in_user->user_email;
+
     if (isset($_POST['createtraineebtn'])) {
         $firstname = $_POST['firstname'];
         $lastname = $_POST['lastname'];
         $email = $_POST['email'];
         $role = $_POST['role'];
         $password = $_POST['password'];
+        $created_by = $user_logged_data;
 
 
         if (empty($firstname)) {
@@ -491,6 +534,7 @@ function addTrainer($attrs)
             if (!is_wp_error($user_id)) {
                 update_user_meta($user_id, 'last_name', $lastname);
                 update_user_meta($user_id, 'role', $role);
+                update_user_meta($user_id, 'created_by', $created_by);
 
                 $user = wp_signon([
                     'user_login' => $email,
@@ -511,6 +555,13 @@ function addTrainer($attrs)
                     $err = "Invalid email or password";
             } 
             }
+
+            $user_logged_in = wp_get_current_user();
+    $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
+    FROM {$wpdb->users} AS users
+    LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
+    LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE id = $user_logged_in->ID");
+
     }
 
     $addTrainer = '';
@@ -562,8 +613,8 @@ function addTrainer($attrs)
             <div class="account-new">
                 <img src=' . $account . ' alt="">
                 <div class="profile">
-                    <h5>Joy</h5>
-                    <p>Project Manager</p>
+                    <h5>' . $user_logged_in->user_login .'</h5>
+                    <p>' . $user_role->role .'</p>
                 </div>
             </div>
         </div>
@@ -574,8 +625,10 @@ function addTrainer($attrs)
         <div class="main-trainee-nav">
             <nav class="trainee-nav">
                 <div class="trainee-welcome-text">
-                    <h3>Welcome, Joy</h3>
-                    <p>Today is Saturday, 10 June 2023</p>
+                    <h3>Welcome, ' . $user_logged_in->user_login .'</h3>
+                    <p>' .
+                    $current_date = date('l, j F Y');
+                    echo "Today is " . $current_date . '</p>
                 </div>
             </nav>
         </div>
@@ -701,6 +754,9 @@ function addProjectManager($attrs)
     $successmsg = false;
     $errormsg = false;
 
+    $loggged_in_user = wp_get_current_user();
+    $user_logged_data = $loggged_in_user->user_email;
+
     if (isset($_POST['createpmbtn'])) {
         if (empty($_POST['firstname'])) {
             $firstnameError = "First Name is required!";
@@ -740,12 +796,14 @@ function addProjectManager($attrs)
             $email = $_POST['email'];
             $role = $_POST['role'];
             $password = $_POST['password'];
+            $created_by = $user_logged_data;
 
             $user_id = wp_create_user($email, $password, $email);
 
             if (!is_wp_error($user_id)) {
                 update_user_meta($user_id, 'last_name', $lastname);
                 update_user_meta($user_id, 'role', $role);
+                update_user_meta($user_id, 'created_by', $created_by);
 
                 $user = wp_signon([
                     'user_login' => $email,
@@ -766,6 +824,13 @@ function addProjectManager($attrs)
                     $err = "Invalid email or password";
             } 
             }
+
+            $user_logged_in = wp_get_current_user();
+    $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
+    FROM {$wpdb->users} AS users
+    LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
+    LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE id = $user_logged_in->ID");
+
     }
 
     $addProjectManager = '';
@@ -821,14 +886,16 @@ function addProjectManager($attrs)
         <div class="main-trainee-nav">
             <nav class="trainee-nav">
                 <div class="trainee-welcome-text">
-                    <h3>Welcome, admin</h3>
-                    <p>Today is Saturday, 10 June 2023</p>
+                    <h3>Welcome, ' . $user_logged_in->user_login . '</h3>
+                    <p>' .
+                    $current_date = date('l, j F Y');
+                    echo "Today is " . $current_date . '</p>
                 </div>
                 <div class="account">
                     <img src=' . $account . ' alt="">
                     <div class="profile">
-                        <h4>admin</h4>
-                        <p>admin</p>
+                        <h4>' . $user_logged_in->user_login . '</h4>
+                        <p>' . $user_logged_in->user_login . '</p>
                     </div>
                 </div>
             </nav>
@@ -1113,7 +1180,7 @@ function add_users()
     add_role('trainee', 'Trainee', array(
         'read' => true,
         'edit_posts' => true,
-        'delete_posts' => true,
+        'delete_posts' => false,
     ));
 
     add_role('trainer', 'Trainer', array(

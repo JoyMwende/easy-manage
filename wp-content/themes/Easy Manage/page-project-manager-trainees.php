@@ -23,17 +23,24 @@ if (isset($_POST['logout'])) {
     wp_redirect('/easy-manage/login');
 }
 
+
 global $wpdb;
 
 $query = "
-        SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role, meta3.meta_value AS cohort
-        FROM {$wpdb->users} AS users
-        LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-        LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' 
+SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role, meta3.meta_value AS cohort
+FROM {$wpdb->users} AS users
+LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
+LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' 
         LEFT JOIN {$wpdb->usermeta} AS meta3 ON meta3.user_id = users.ID AND meta3.meta_key = 'cohort' WHERE meta2.meta_value = 'Trainee' 
     ";
 
-$trainees = $wpdb->get_results($query);
+    $trainees = $wpdb->get_results($query);
+    
+$user_logged_in = wp_get_current_user();
+$user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
+    FROM {$wpdb->users} AS users
+    LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
+    LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE id = $user_logged_in->ID")
 
 ?>
 <?php get_header(); ?>
@@ -86,8 +93,8 @@ $trainees = $wpdb->get_results($query);
             <div class="account-new">
                 <img src="<?php echo $account; ?>" alt="">
                 <div class="profile">
-                    <h5>Joy</h5>
-                    <p>Project Manager</p>
+                    <h5><?php echo $user_logged_in->user_login; ?></h5>
+                    <p><?php echo $user_role->role; ?></p>
                 </div>
             </div>
         </div>
@@ -98,7 +105,7 @@ $trainees = $wpdb->get_results($query);
         <div class="main-trainee-nav">
             <nav class="trainee-nav">
                 <div class="trainee-welcome-text">
-                    <h3>Welcome, Joy</h3>
+                    <h3>Welcome, <?php echo $user_logged_in->user_login; ?></h3>
                     <p>Today is Saturday, 10 June 2023</p>
                 </div>
                 <div class="btnadd">

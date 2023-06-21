@@ -34,19 +34,45 @@ $total_users = $count_total_users['total_users'];
 global $wpdb;
 
 $query = "
-        SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
+        SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role, meta3.meta_value AS created_by
         FROM {$wpdb->users} AS users
         LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-        LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE meta2.meta_value = 'Project Manager'
+        LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' 
+        LEFT JOIN {$wpdb->usermeta} AS meta3 ON meta2.user_id = users.ID AND meta3.meta_key = 'created_by' WHERE meta2.meta_value = 'Project Manager'
     ";
 
     $project_managers = $wpdb->get_results($query);
 
     $total_pm = count($project_managers);
 
+$query = "
+        SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role, meta3.meta_value AS created_by
+        FROM {$wpdb->users} AS users
+        LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
+        LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' 
+        LEFT JOIN {$wpdb->usermeta} AS meta3 ON meta2.user_id = users.ID AND meta3.meta_key = 'created_by' WHERE meta2.meta_value = 'Trainer'
+    ";
+
+    $trainers_count = $wpdb->get_results($query);
+
+    $total_trainers = count($trainers_count);
+
+$query = "
+        SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role, meta3.meta_value AS created_by
+        FROM {$wpdb->users} AS users
+        LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
+        LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' 
+        LEFT JOIN {$wpdb->usermeta} AS meta3 ON meta2.user_id = users.ID AND meta3.meta_key = 'created_by' WHERE meta2.meta_value = 'Trainee'
+    ";
+
+    $trainees_count = $wpdb->get_results($query);
+
+    $total_trainees = count($trainees_count);
+
 
 // $project_manager = get_users( array( 'role' => 'project_manager' ) );
 
+$user_logged_in = wp_get_current_user();
 
 ?>
 
@@ -104,14 +130,17 @@ $query = "
         <div class="main-trainee-nav">
             <nav class="trainee-nav">
                 <div class="trainee-welcome-text">
-                    <h3>Welcome, admin</h3>
-                    <p>Today is Saturday, 10 June 2023</p>
+                    <h3>Welcome, <?php echo $user_logged_in->user_login; ?></h3>
+                    <p><?php
+                        $current_date = date('l, j F Y');
+                        echo "Today is " . $current_date;
+                    ?></p>
                 </div>
                 <div class="account">
                     <img src="<?php echo $account; ?>" alt="">
                     <div class="profile">
-                        <h4>admin</h4>
-                        <p>admin</p>
+                        <h4><?php echo $user_logged_in->user_login; ?></h4>
+                        <p><?php echo $user_logged_in->user_login; ?></p>
                     </div>
                 </div>
             </nav>
@@ -149,7 +178,7 @@ $query = "
                     </section>
                     <section class="tasks-nums">
                         <p>Total Trainers</p>
-                        <h3>10 Trainees</h5>
+                        <h3><?php echo $total_trainers; ?> Trainers</h5>
                     </section>
                 </div>
                 <div class="admin-tasks-count shadow-sm">
@@ -158,7 +187,7 @@ $query = "
                     </section>
                     <section class="tasks-nums">
                         <p>Total Trainees</p>
-                        <h3>20 Trainees</h5>
+                        <h3><?php echo $total_trainees; ?> Trainees</h5>
                     </section>
                 </div>
                 <div class="admin-tasks-count shadow-sm">
@@ -206,20 +235,24 @@ $query = "
                     $user_role = get_user_meta($user->ID, 'role');
                     $role = reset($user_role);
 
-                    // Retrieve the creator's ID from user meta data
-                    $creator_id = get_user_meta($user->ID, 'creator_id', true);
+                    // Retrieve creator from wp_usermeta table
+                    $creator_email = get_user_meta($user->ID, 'created_by');
+                    $creator = reset($creator_email);
 
-                    // Retrieve the role of the creator
-                    $creator_role = '';
-                    if (!empty($creator_id)) {
-                        $creator_role = get_user_meta($creator_id, 'role', true);
-                    }
+                    // Retrieve the creator's ID from user meta data
+                    // $creator_id = get_user_meta($user->ID, 'creator_id', true);
+
+                    // // Retrieve the role of the creator
+                    // $creator_role = '';
+                    // if (!empty($creator_id)) {
+                    //     $creator_role = get_user_meta($creator_id, 'role', true);
+                    // }
                 ?>
                     <tr>
                         <td><?php echo $display_name; ?></td>
                         <td><?php echo $email; ?></td>
                         <td><?php echo $role; ?></td>
-                        <td><?php echo $creator_role; ?></td>
+                        <td><?php echo $creator; ?></td>
                     </tr>
                     <?php } ?>
                 </tbody>

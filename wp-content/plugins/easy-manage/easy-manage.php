@@ -14,6 +14,7 @@
     Text Domain: easy-manage-plugin
 */
 
+
 // security check
 defined('ABSPATH') or die('Hey you hacker!. Got you!!');
 
@@ -33,3 +34,25 @@ function deactivate_easymanageplugin(){
 if(class_exists('Inc\\Init')){
     Inc\Init::register_services();
 }
+
+// require_once plugin_dir_path(__FILE__) . 'inc/Pages/AdminRoutes.php';
+use Inc\Pages\AdminRoutes;
+use Inc\Pages\PmRoutes;
+use Inc\Pages\TrainerRoutes;
+use Inc\Pages\TraineeRoutes;
+
+function easy_manage_register_routes() {
+    $admin_routes = new AdminRoutes();
+    $admin_routes->register_admin_routes();
+    
+    $pm_routes = new PmRoutes();
+    $pm_routes->register_pm_routes();
+
+    $trainer_routes = new TrainerRoutes();
+    $trainer_routes->register_trainer_routes();
+
+    $trainee_routes = new TraineeRoutes();
+    $trainee_routes->register_trainee_routes();
+
+}
+add_action('rest_api_init', 'easy_manage_register_routes');
