@@ -97,39 +97,98 @@
             )
         );
 
+        register_rest_route(
+            'easymanage/v2',
+            '/non-deleted-trainers/',
+            array(
+                'methods' => 'GET',
+                'callback' => array($this, 'view_non_deleted_trainers'),
+                'permission_callback' => function () {
+                    return current_user_can('project_manager');
+                }
+            )
+        );
+
     }
 
     public function get_trainers(){
-        global $wpdb;
-        $query = "
-            SELECT users.ID AS id, users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
-            FROM {$wpdb->users} AS users
-            LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-            LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE meta2.meta_value = 'Trainer' 
-    ";
-        $trainers = $wpdb->get_results($query);
-        return $trainers;
+        $args = array(
+        'role'    => 'trainer', // Specify the desired role
+        'orderby' => 'registered',
+        'order'   => 'DESC',
+    );
+    
+    $trainers = get_users($args);
+    
+    $trainer_list = array();
+    foreach ($trainers as $trainer) {
+        $trainer_data = array(
+            'id'         => $trainer->ID,
+            'username'   => $trainer->user_login,
+            'email'      => $trainer->user_email,
+            'first_name' => $trainer->first_name,
+            'last_name'  => $trainer->last_name,
+            'created_by' => get_user_meta($trainer->ID, 'created_by', true),
+        );
+        
+        $trainer_list[] = $trainer_data;
+    }
+        if($trainer_list){
+            return $trainer_list;
+        } else {
+            return new \WP_Error('cant-get', 'Cant get trainer', array('status' => 500));
+        }
     }
 
-    public function get_trainer($request){
-        global $wpdb;
-        $id = $request['id'];
-        $query = "
-            SELECT users.ID AS id, users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
-            FROM {$wpdb->users} AS users
-            LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-            LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE meta2.meta_value = 'Trainer' AND users.ID = {$id}
-    ";
-        $trainer = $wpdb->get_results($query);
-        return $trainer;
-    }
 
-    public function delete_trainer($request){
-        global $wpdb;
-        $id = $request['id'];
-        $wpdb->delete($wpdb->users, array('ID' => $id));
-        return 'Trainer Deleted';
+
+    public function get_trainer($request) {
+        $trainer_id = $request->get_param('id');
+    $trainer = get_user_by('ID', $trainer_id);
+
+    if ($trainer) {
+        $trainer_data = array(
+            'user_login' => $trainer->user_login,
+            'user_email' => $trainer->user_email,
+            'first_name' => $trainer->first_name,
+            'last_name' => $trainer->last_name,
+            'created_by' => get_user_meta($trainer_id, 'created_by', true),
+            'role' => $trainer->roles[0], 
+        );
+
+        return rest_ensure_response($trainer_data);
+    } else {
+        return new \WP_Error('trainer-not-found', 'Trainer not found', array('status' => 404));
     }
+}
+
+    public function delete_trainer($request) {
+        $user_id = $request['id'];
+        $user = get_user_by('ID', $user_id);
+
+        if (!$user) {
+            return new \WP_Error('user_not_found', 'Trainer not found', ['status' => 404]);
+        }
+
+        // Update user meta to mark the trainer as deleted
+        $is_deleted = update_user_meta($user_id, 'is_deleted', true);
+
+        if (!$is_deleted) {
+            return new \WP_Error('delete_failed', 'Trainer deletion failed', ['status' => 500]);
+        }
+
+        // Check if the user is an admin
+        $user_roles = $user->roles;
+        if (in_array('administrator', $user_roles)) {
+            return new \WP_Error('delete_admin_not_allowed', 'Deleting admin user is not allowed', ['status' => 403]);
+        }
+
+        if (in_array('project_manager', $user_roles)) {
+            return new \WP_Error('delete_project_manager_not_allowed', 'Deleting project manager user is not allowed', ['status' => 403]);
+        }
+
+        return 'Trainer soft deleted successfully';
+}
 
     public function update_trainer($request) {
     global $wpdb;
@@ -175,36 +234,36 @@
 
 
 
-   public function create_trainer($request) {
+    public function create_trainer($request) {
     global $wpdb;
+    $trainer_logged_in = wp_get_current_user();
 
     $params = $request->get_params();
-    $user = array(
-        'user_login' => $params['firstname'],
-        'user_email' => $params['email'],
-        'user_pass' => $params['password']
-    );
+    $user_login = $params['firstname'];
+    $user_email = $params['email'];
+    $user_pass = $params['password'];
 
     $role = $params['role'];
     $lastname = $params['lastname'];
+    $created_by = $trainer_logged_in->first_name . ' ' . $trainer_logged_in->last_name;
 
-    $req = $wpdb->insert(
-        $wpdb->users,
-        $user
-    );
+    $user_id = wp_create_user($user_login, $user_pass, $user_email);
 
-    if ($req) {
-        $user_id = $wpdb->insert_id;
+    if (!is_wp_error($user_id)) {
+        $user = get_user_by('id', $user_id);
+
+        $user->set_role($role);
+        wp_update_user($user);
 
         update_user_meta($user_id, 'last_name', $lastname);
-        update_user_meta($user_id, 'role', $role);
+        update_user_meta($user_id, 'created_by', $created_by);
 
         $res = "Trainer Created";
         return rest_ensure_response($res);
     } else {
         $wpdb_error = $wpdb->last_error;
         $error_message = 'Cannot create Trainer: ' . $wpdb_error;
-        error_log($error_message); // Log the error message for debugging purposes
+        error_log($error_message); 
 
         return new \WP_Error('cant-create', $error_message, array('status' => 500));
     }
@@ -212,29 +271,81 @@
 
 
     public function get_trainees(){
-        global $wpdb;
-        $query = "
-            SELECT users.ID AS id, users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role, meta3.meta_value AS cohort
-            FROM {$wpdb->users} AS users
-            LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-            LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' 
-            LEFT JOIN {$wpdb->usermeta} AS meta3 ON meta3.user_id = users.ID AND meta3.meta_key = 'cohort' WHERE meta2.meta_value = 'Trainee' 
-        ";
-        $trainees = $wpdb->get_results($query);
-        return $trainees;
+        $args = array(
+        'role'    => 'trainee', // Specify the desired role
+        'orderby' => 'registered',
+        'order'   => 'DESC',
+    );
+    
+    $trainees = get_users($args);
+    
+    $trainee_list = array();
+    foreach ($trainees as $trainee) {
+        $trainee_data = array(
+            'id'         => $trainee->ID,
+            'username'   => $trainee->user_login,
+            'email'      => $trainee->user_email,
+            'first_name' => $trainee->first_name,
+            'last_name'  => $trainee->last_name,
+            'cohort'     => get_user_meta($trainee->ID, 'cohort', true),
+            'created_by' => get_user_meta($trainee->ID, 'created_by', true),
+        );
+        
+        $trainee_list[] = $trainee_data;
+    }
+        if($trainee_list){
+            return $trainee_list;
+        } else {
+            return new \WP_Error('cant-get', 'Cant get trainee', array('status' => 500));
+        }
+    }
+    
+
+    public function get_trainee($request) {
+        $trainee_id = $request->get_param('id');
+    $trainee = get_user_by('ID', $trainee_id);
+
+    if ($trainee) {
+        $trainee_data = array(
+            'user_login' => $trainee->user_login,
+            'user_email' => $trainee->user_email,
+            'first_name' => $trainee->first_name,
+            'last_name' => $trainee->last_name,
+            'cohort' => get_user_meta($trainee_id, 'cohort', true),
+            'created_by' => get_user_meta($trainee_id, 'created_by', true),
+            'role' => $trainee->roles[0], // Assuming the trainee has only one role
+        );
+
+        return rest_ensure_response($trainee_data);
+    } else {
+        return new \WP_Error('trainee-not-found', 'Trainee not found', array('status' => 404));
+    }
+}
+
+    public function view_non_deleted_trainers() {
+    $non_deleted_trainers = get_users(array(
+        'role' => 'trainer',
+        'meta_query' => array(
+            'relation' => 'AND',
+            array(
+                'key'     => 'is_active',
+                'value'   => true,
+            ),
+            array(
+                'key'     => 'is_deleted',
+                'value'   => false,
+            ),
+        ),
+    ));
+
+    if (empty($non_deleted_trainers)) {
+        return new \WP_Error('no_non_deleted_trainers', 'No non-deleted trainers found', ['status' => 404]);
     }
 
-    public function get_trainee($request){
-        global $wpdb;
-        $id = $request['id'];
-        $query = "
-            SELECT users.ID AS id, users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role, meta3.meta_value AS cohort
-            FROM {$wpdb->users} AS users
-            LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-            LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' 
-            LEFT JOIN {$wpdb->usermeta} AS meta3 ON meta3.user_id = users.ID AND meta3.meta_key = 'cohort' WHERE meta2.meta_value = 'Trainee' AND users.ID = {$id}
-        ";
-        $trainee = $wpdb->get_results($query);
-        return $trainee;
+    if(is_wp_error($non_deleted_trainers)){
+        return new \WP_Error('cant-get', 'Cant get non-deleted trainers', array('status' => 500));
     }
+    return $non_deleted_trainers;
+}
+
  }

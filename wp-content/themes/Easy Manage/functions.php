@@ -1196,3 +1196,14 @@ function add_users()
     ));
 }
 add_action('init', 'add_users');
+
+function count_total_users(){
+    $result = wp_remote_get('https://easy-manage.com/wp-json/easymanage/v1/total-users', [
+        'method' => 'GET',
+        'headers' => ['Authorization => Bearer ' . $GLOBALS['token']]
+    ]);
+
+    $response = json_decode(wp_remote_retrieve_body($result));
+
+    return $response;
+}
