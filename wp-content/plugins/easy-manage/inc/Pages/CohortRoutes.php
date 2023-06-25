@@ -78,7 +78,7 @@
     public function get_cohorts(){
         global $wpdb;
         $table_name = $wpdb->prefix . 'cohorts';
-        $cohorts = $wpdb->get_results("SELECT * FROM $table_name");
+        $cohorts = $wpdb->get_results("SELECT * FROM $table_name WHERE is_deleted = 0");
         return $cohorts;
     }
 
@@ -108,7 +108,7 @@
     public function create_cohort($request) {
         $request_data = $request->get_params();
 
-        $required_fields = ['cohort_name', 'location', 'cohort_trainer', 'languages', 'startdate', 'enddate'];
+        $required_fields = ['cohort_name', 'location', 'languages', 'startdate', 'enddate'];
         foreach ($required_fields as $field) {
             if (empty($request_data[$field])) {
                 return new \WP_Error('missing-fields', 'Please provide all required fields.', array('status' => 400));
@@ -138,7 +138,7 @@
         $request_data = $request->get_params();
         
         // Check for missing fields
-        $required_fields = ['id', 'cohort_name', 'location', 'cohort_trainer', 'languages', 'startdate', 'enddate'];
+        $required_fields = ['id', 'cohort_name', 'location', 'languages', 'startdate', 'enddate'];
         foreach ($required_fields as $field) {
             if (empty($request_data[$field])) {
                 return new \WP_Error('missing-fields', 'Please provide all required fields.', array('status' => 400));

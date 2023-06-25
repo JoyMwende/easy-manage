@@ -28,92 +28,22 @@ if(isset($_POST['logout'])){
     wp_redirect('/easy-manage/login');
 }
 
+$user_logged_in = wp_get_current_user();
+
 //GET TOTAL USERS
 $total_users = count_total_users();
 
-// $count_total_users = count_users();
-// $total_users = $count_total_users['total_users'];
-
-global $wpdb;
-
 //get total project managers
+// $total_pm = count_total_project_managers();
 
-$project_manager_role = 'project_manager'; 
-    
-    $project_managers = get_users(array(
-        'role' => $project_manager_role,
-        'fields' => array('ID', 'user_login', 'user_email', 'role'),
-        'meta_query' => array(
-            array(
-                'key' => 'last_name',
-                'compare' => 'EXISTS',
-            ),
-        ),
-    ));
+//get total trainers
+// $total_trainers = count_total_trainers();
 
-    $total_pm = count($project_managers);
+//get total trainees
+// $total_trainees = count_total_trainees();
 
-
-    //get total trainers
-$args = array(
-        'role'    => 'trainer', 
-        'orderby' => 'registered',
-        'order'   => 'DESC',
-    );
-    
-    $trainers = get_users($args);
-    
-    $trainer_list = array();
-    foreach ($trainers as $trainer) {
-        $trainer_data = array(
-            'id'         => $trainer->ID,
-            'username'   => $trainer->user_login,
-            'email'      => $trainer->user_email,
-            'first_name' => $trainer->first_name,
-            'last_name'  => $trainer->last_name,
-            'created_by' => get_user_meta($trainer->ID, 'created_by', true),
-        );
-        
-        $trainer_list[] = $trainer_data;
-    };
-
-    $total_trainers = count($trainer_list);
-
-    //get total trainees
-
-$args = array(
-        'role'    => 'trainee', // Specify the desired role
-        'orderby' => 'registered',
-        'order'   => 'DESC',
-    );
-    
-    $trainees = get_users($args);
-    
-    $trainee_list = array();
-    foreach ($trainees as $trainee) {
-        $trainee_data = array(
-            'id'         => $trainee->ID,
-            'username'   => $trainee->user_login,
-            'email'      => $trainee->user_email,
-            'first_name' => $trainee->first_name,
-            'last_name'  => $trainee->last_name,
-            'cohort'     => get_user_meta($trainee->ID, 'cohort', true),
-            'created_by' => get_user_meta($trainee->ID, 'created_by', true),
-        );
-        
-        $trainee_list[] = $trainee_data;
-    }
-
-    $total_trainees = count($trainee_list);
-
-    //get total tasks
-    global $wpdb;
-    $tasks = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}tasks");
-    $total_tasks = count($tasks);
-
-// $project_manager = get_users( array( 'role' => 'project_manager' ) );
-
-$user_logged_in = wp_get_current_user();
+//get total tasks
+// $total_tasks = count_total_tasks();
 
 ?>
 
@@ -121,6 +51,7 @@ $user_logged_in = wp_get_current_user();
 
 <div class="page">
     <div class="sidebar">
+        <?php //get_sidebar(); ?>
         <div class="logo">
             <a href="#">
                 <h3>Eazzy Manage</h3>
@@ -210,7 +141,7 @@ $user_logged_in = wp_get_current_user();
                     </section>
                     <section class="tasks-nums">
                         <p>Project Managers</p>
-                        <h3><?php echo $total_pm; ?> Project Managers</h5>
+                        <h3><?php //echo $total_pm; ?> Project Managers</h5>
                     </section>
                 </div>
                 <div class="admin-tasks-count shadow-sm">
@@ -219,7 +150,7 @@ $user_logged_in = wp_get_current_user();
                     </section>
                     <section class="tasks-nums">
                         <p>Total Trainers</p>
-                        <h3><?php echo $total_trainers; ?> Trainers</h5>
+                        <h3><?php //echo $total_trainers; ?> Trainers</h5>
                     </section>
                 </div>
                 <div class="admin-tasks-count shadow-sm">
@@ -228,7 +159,7 @@ $user_logged_in = wp_get_current_user();
                     </section>
                     <section class="tasks-nums">
                         <p>Total Trainees</p>
-                        <h3><?php echo $total_trainees; ?> Trainees</h5>
+                        <h3><?php //echo $total_trainees; ?> Trainees</h5>
                     </section>
                 </div>
                 <div class="admin-tasks-count shadow-sm">
@@ -237,7 +168,7 @@ $user_logged_in = wp_get_current_user();
                     </section>
                     <section class="tasks-nums">
                         <p>Total Tasks Created</p>
-                        <h3><?php echo $total_tasks; ?> Tasks</h5>
+                        <h3><?php //echo $total_tasks; ?> Tasks</h5>
                     </section>
                 </div>
             </div>

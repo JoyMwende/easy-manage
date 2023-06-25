@@ -1,5 +1,6 @@
+</div>
 <div class="footer">
-    <footer>
+    <foote>
         <?php wp_footer(); ?>
         <p>2023 Copyright. All rights reserved.</p>
     </footer>

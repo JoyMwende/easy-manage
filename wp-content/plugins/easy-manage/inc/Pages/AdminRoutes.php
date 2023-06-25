@@ -250,6 +250,17 @@
                 return current_user_can('manage_options');
             }
         ));
+
+        register_rest_route(
+            'easymanage/v1',
+            '/deleted-users/',
+             array(
+            'methods' => 'GET',
+            'callback' => array($this, 'get_deleted_users'),
+            'permission_callback' => function () {
+                return current_user_can('manage_options');
+            }
+        ));
     }
 
     public function get_users(){
@@ -265,7 +276,7 @@
         ");
 
         if($users){
-            return $users;
+            return new \WP_REST_Response($users, 200);
         } else {
             return new \WP_Error('cant-get', 'Cant Get Users', array('status' => 500));
         }
@@ -284,7 +295,7 @@
         ");
 
         if($user){
-            return $user;
+            return new \WP_REST_Response($user, 200);
         } else {
             return new \WP_Error('cant-get', 'Cant Get User', array('status' => 500));
         }
@@ -312,8 +323,14 @@
         return new \WP_Error('delete_failed', 'User deletion failed', ['status' => 500]);
     }
 
-    return 'User deleted successfully';
-}
+        $response = array(
+            'message' => 'User deleted successfully',
+            'status' => 200
+        );
+
+        return new \WP_REST_Response($response, 200);
+
+    }
 
 
 
@@ -330,7 +347,7 @@
 
     $role = $params['role'];
     $lastname = $params['lastname'];
-    $created_by = $user_logged_in->first_name . ' ' . $user_logged_in->last_name;
+    $created_by = $user_logged_in->user_login;
 
     $user_id = wp_create_user($user_login, $user_pass, $user_email);
 
@@ -382,7 +399,7 @@
         $trainee_list[] = $trainee_data;
     }
         if($trainee_list){
-            return $trainee_list;
+            return new \WP_REST_Response($trainee_list, 200);
         } else {
             return new \WP_Error('cant-get', 'Cant get trainee', array('status' => 500));
         }
@@ -412,7 +429,7 @@
     ));
 
     if ($project_managers) {
-        return $project_managers;
+            return new \WP_REST_Response($project_managers, 200);
     } else {
         return new \WP_Error('no_project_managers', 'No active project managers found', array('status' => 404));
     }
@@ -447,8 +464,14 @@
         return new \WP_Error('delete_failed', 'Project Manager deletion failed', ['status' => 500]);
     }
 
-    return 'Project Manager deleted successfully';
-}
+        $response = array(
+            'message' => 'Project manager deleted successfully',
+            'status' => 200
+        );
+
+        return new \WP_REST_Response($response, 200);
+
+    }
 
 
     public function get_trainers() {
@@ -486,7 +509,7 @@
         }
 
         if ($trainer_list) {
-            return $trainer_list;
+            return new \WP_REST_Response($trainer_list, 200);
         } else {
             return new \WP_Error('cant-get', 'Cannot get trainers', array('status' => 500));
     }
@@ -507,7 +530,13 @@
             return new \WP_Error('deactivate_failed', 'User not deactivated', ['status' => 500]);
         }
 
-        return 'User deactivated successfully';
+        $response = array(
+            'message' => 'User deactivated successfully',
+            'status' => 200
+        );
+
+        return new \WP_REST_Response($response, 200);
+
 
     }
 
@@ -528,7 +557,13 @@
             return new \WP_Error('activate_failed', 'User not activated', ['status' => 500]);
         }
 
-        return 'User activated successfully';
+        $response = array(
+            'message' => 'User activated successfully',
+            'status' => 200
+        );
+
+        return new \WP_REST_Response($response, 200);
+
 
     }
 
@@ -543,7 +578,7 @@
         }
 
         if($activated_users){
-            return $activated_users;
+            return new \WP_REST_Response($activated_users, 200);
         } else {
             return new \WP_Error('cant-get', 'Cant Get Activated Users', array('status' => 500));
         }
@@ -560,7 +595,7 @@
     }
 
     if($deactivated_users){
-        return $deactivated_users;
+            return new \WP_REST_Response($deactivated_users, 200);
     } else {    
         return new \WP_Error('cant-get', 'Cant Get Deactivated Users', array('status' => 500));
     }
@@ -587,7 +622,7 @@
         }
 
         if($non_deleted_pms){
-            return $non_deleted_pms;
+            return new \WP_REST_Response($non_deleted_pms, 200);
         } else {
             return new \WP_Error('cant-get', 'Cant Get Non Deleted Project Managers', array('status' => 500));
         }
@@ -601,7 +636,7 @@
         $task = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE id = %d", $task_id));
 
         if ($task) {
-            return $task;
+            return new \WP_REST_Response($task, 200);
         } else {
             return new \WP_Error('no_task', 'No task found', array('status' => 404));
         }
@@ -632,7 +667,7 @@
         );
 
         if ($total_users) {
-            return $total_users;
+            return new \WP_REST_Response($total_users, 200);
         } else {
             return new \WP_Error('cant-get', 'Cannot get total users', array('status' => 500));
         }
@@ -678,7 +713,7 @@
         $total_pm = count($project_managers);
 
         if ($total_pm) {
-            return $total_pm;
+            return new \WP_REST_Response($total_pm, 200);;
         } else {
             return new \WP_Error('cant-get', 'Cannot get total project managers', array('status' => 500));
         }
@@ -714,7 +749,7 @@
     $total_trainers = count($trainer_list);
 
     if($total_trainers){
-        return $total_trainers;
+            return new \WP_REST_Response($total_trainers, 200);
     } else {
         return new \WP_Error('cant-get', 'Cant Get Total Trainers', array('status' => 500));
     }
@@ -749,7 +784,7 @@
         $total_trainees = count($trainee_list);
 
         if($total_trainees){
-            return $total_trainees;
+            return new \WP_REST_Response($total_trainees, 200);
         } else {
             return new \WP_Error('cant-get', 'Cant Get Total Trainees', array('status' => 500));
         }
@@ -764,10 +799,35 @@
         $total_tasks = count($tasks);
 
         if($total_tasks){
-            return $total_tasks;
+            return new \WP_REST_Response($total_tasks, 200);
         } else {
             return new \WP_Error('cant-get', 'Cant Get Total Tasks', array('status' => 500));
         }
     }
-    
- }
+
+    public function get_deleted_users()
+    {
+        global $wpdb;
+
+        $deleted_users = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT users.ID, users.user_login AS username, users.user_email AS email, meta1.meta_value AS first_name, meta2.meta_value AS last_name, meta3.meta_value AS is_active, meta4.meta_value AS is_deleted, meta5.meta_value AS wp_capabilities
+            FROM {$wpdb->users} AS users
+            LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'first_name'
+            LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'last_name'
+            LEFT JOIN {$wpdb->usermeta} AS meta3 ON meta3.user_id = users.ID AND meta3.meta_key = 'is_active'
+            LEFT JOIN {$wpdb->usermeta} AS meta4 ON meta4.user_id = users.ID AND meta4.meta_key = 'is_deleted'
+            LEFT JOIN {$wpdb->usermeta} AS meta5 ON meta5.user_id = users.ID AND meta5.meta_key = 'wp_capabilities'
+            WHERE meta3.meta_value = 0 AND meta4.meta_value = 1"
+            )
+        );
+
+        if (!empty($deleted_users)) {
+            return rest_ensure_response($deleted_users);
+        } else {
+            return new \WP_Error('cant-get', 'Cannot get deleted users', array('status' => 500));
+        }
+    }
+
+
+}

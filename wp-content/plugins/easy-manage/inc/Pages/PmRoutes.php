@@ -99,10 +99,10 @@
 
         register_rest_route(
             'easymanage/v2',
-            '/non-deleted-trainers/',
+            '/deleted-trainers/',
             array(
                 'methods' => 'GET',
-                'callback' => array($this, 'view_non_deleted_trainers'),
+                'callback' => array($this, 'get_deleted_trainers'),
                 'permission_callback' => function () {
                     return current_user_can('project_manager');
                 }
@@ -111,34 +111,51 @@
 
     }
 
-    public function get_trainers(){
+    public function get_trainers()
+    {
         $args = array(
-        'role'    => 'trainer', // Specify the desired role
-        'orderby' => 'registered',
-        'order'   => 'DESC',
-    );
-    
-    $trainers = get_users($args);
-    
-    $trainer_list = array();
-    foreach ($trainers as $trainer) {
-        $trainer_data = array(
-            'id'         => $trainer->ID,
-            'username'   => $trainer->user_login,
-            'email'      => $trainer->user_email,
-            'first_name' => $trainer->first_name,
-            'last_name'  => $trainer->last_name,
-            'created_by' => get_user_meta($trainer->ID, 'created_by', true),
+            'role' => 'trainer',
+            // Specify the desired role
+            'meta_query' => array(
+                'relation' => 'AND',
+                array(
+                    'key' => 'is_deleted',
+                    'value' => 0,
+                    'compare' => '=',
+                ),
+                array(
+                    'key' => 'is_active',
+                    'value' => 1,
+                    'compare' => '=',
+                ),
+            ),
+            'orderby' => 'registered',
+            'order' => 'DESC',
         );
-        
-        $trainer_list[] = $trainer_data;
-    }
-        if($trainer_list){
+
+        $trainers = get_users($args);
+
+        $trainer_list = array();
+        foreach ($trainers as $trainer) {
+            $trainer_data = array(
+                'id' => $trainer->ID,
+                'username' => $trainer->user_login,
+                'email' => $trainer->user_email,
+                'first_name' => $trainer->first_name,
+                'last_name' => $trainer->last_name,
+                'created_by' => get_user_meta($trainer->ID, 'created_by', true),
+            );
+
+            $trainer_list[] = $trainer_data;
+        }
+
+        if ($trainer_list) {
             return $trainer_list;
         } else {
-            return new \WP_Error('cant-get', 'Cant get trainer', array('status' => 500));
+            return new \WP_Error('cant-get', 'Unable to retrieve trainers', array('status' => 500));
         }
     }
+
 
 
 
@@ -153,6 +170,8 @@
             'first_name' => $trainer->first_name,
             'last_name' => $trainer->last_name,
             'created_by' => get_user_meta($trainer_id, 'created_by', true),
+            'is_active' => get_user_meta($trainer_id, 'is_active', true),
+            'is_deleted' => get_user_meta($trainer_id, 'is_deleted', true),
             'role' => $trainer->roles[0], 
         );
 
@@ -162,112 +181,138 @@
     }
 }
 
-    public function delete_trainer($request) {
+    public function delete_trainer($request)
+    {
         $user_id = $request['id'];
         $user = get_user_by('ID', $user_id);
 
         if (!$user) {
-            return new \WP_Error('user_not_found', 'Trainer not found', ['status' => 404]);
+            return new \WP_Error('user_not_found', 'User not found', ['status' => 404]);
         }
 
-        // Update user meta to mark the trainer as deleted
-        $is_deleted = update_user_meta($user_id, 'is_deleted', true);
-
-        if (!$is_deleted) {
-            return new \WP_Error('delete_failed', 'Trainer deletion failed', ['status' => 500]);
-        }
-
-        // Check if the user is an admin
         $user_roles = $user->roles;
         if (in_array('administrator', $user_roles)) {
             return new \WP_Error('delete_admin_not_allowed', 'Deleting admin user is not allowed', ['status' => 403]);
         }
-
         if (in_array('project_manager', $user_roles)) {
-            return new \WP_Error('delete_project_manager_not_allowed', 'Deleting project manager user is not allowed', ['status' => 403]);
+            return new \WP_Error('delete_project_manager_not_allowed', 'Deleting project manager is not allowed', ['status' => 403]);
         }
 
-        return 'Trainer soft deleted successfully';
-}
+        $is_deleted = update_user_meta($user_id, 'is_deleted', 1);
+        $is_inactive = update_user_meta($user_id, 'is_active', 0);
 
-    public function update_trainer($request) {
-    global $wpdb;
+        if (!$is_deleted || !$is_inactive) {
+            return new \WP_Error('delete_failed', 'User deletion failed', ['status' => 500]);
+        }
 
-    $user_id = $request->get_param('id');
-    $trainer = get_user_by('ID', $user_id);
+        $response = array(
+            'message' => 'Trainer deleted successfully',
+            'status' => 200
+        );
 
-    // Retrieve existing user data
-    if (!$trainer) {
-        return new \WP_Error('user-not-found', 'User not found', array('status' => 404));
+        return new \WP_REST_Response($response, 200);
+
     }
 
-    // Update user data
-    $updated_user = array(
-        'user_email' => $request->get_param('email'),
-        'user_pass' => $request->get_param('password')
-    );
+    public function update_trainer($request)
+    {
+        global $wpdb;
 
-    $role = $request->get_param('role');
-    $lastname = $request->get_param('lastname');
+        $params = $request->get_params();
+        $trainer_id = $params['id'];
+        $user_login = $params['firstname'];
+        $user_email = $params['email'];
+        $user_pass = $params['password'];
+        $role = $params['role'];
+        $lastname = $params['lastname'];
+        $created_by = $params['created_by'];
+        $cohort_name = $params['cohort_name']; // Added cohort name parameter
 
-    $req = $wpdb->update(
-        $wpdb->users,
-        $updated_user,
-        array('ID' => $user_id)
-    );
+        $user_data = array(
+            'ID' => $trainer_id,
+            'user_login' => $user_login,
+            'user_email' => $user_email,
+            'user_pass' => $user_pass,
+            'role' => $role,
+        );
 
-    if ($req !== false) {
-        update_user_meta($user_id, 'last_name', $lastname);
-        update_user_meta($user_id, 'role', $role);
+        $updated = wp_update_user($user_data);
 
-        $res = "Trainer Updated";
+        if (is_wp_error($updated)) {
+            $error_message = $updated->get_error_message();
+            return new \WP_Error('update-error', $error_message, array('status' => 500));
+        }
+
+        update_user_meta($trainer_id, 'last_name', $lastname);
+        update_user_meta($trainer_id, 'created_by', $created_by);
+        update_user_meta($trainer_id, 'cohort_assigned', $cohort_name);
+
+        
+        $table = $wpdb->prefix . 'cohorts';
+        $wpdb->update(
+            $table,
+            array('cohort_trainer' => $user_login),
+            array('cohort_name' => $cohort_name)
+        );
+
+        $res = "Trainer updated";
         return rest_ensure_response($res);
-    } else {
-        $wpdb_error = $wpdb->last_error;
-        $error_message = 'Cannot update Trainer: ' . $wpdb_error;
-        error_log($error_message); // Log the error message for debugging purposes
-
-        return new \WP_Error('cant-update', $error_message, array('status' => 500));
     }
-}
 
 
 
 
-    public function create_trainer($request) {
-    global $wpdb;
-    $trainer_logged_in = wp_get_current_user();
 
-    $params = $request->get_params();
-    $user_login = $params['firstname'];
-    $user_email = $params['email'];
-    $user_pass = $params['password'];
+    // Create a trainer and assign to a cohort
+    public function create_trainer($request)
+    {
+        global $wpdb;
+        $user_logged_in = wp_get_current_user();
 
-    $role = $params['role'];
-    $lastname = $params['lastname'];
-    $created_by = $trainer_logged_in->first_name . ' ' . $trainer_logged_in->last_name;
+        $params = $request->get_params();
+        $user_login = $params['firstname'];
+        $user_email = $params['email'];
+        $user_pass = $params['password'];
 
-    $user_id = wp_create_user($user_login, $user_pass, $user_email);
+        $role = $params['role'];
+        $lastname = $params['lastname'];
+        $cohort_name = $params['cohort_name'];
+        $created_by = $user_logged_in->user_login . ' ' . $user_logged_in->last_name;
 
-    if (!is_wp_error($user_id)) {
-        $user = get_user_by('id', $user_id);
+        $user_id = wp_create_user($user_login, $user_pass, $user_email);
 
-        $user->set_role($role);
-        wp_update_user($user);
+        if (!is_wp_error($user_id)) {
+            $user = get_user_by('id', $user_id);
 
-        update_user_meta($user_id, 'last_name', $lastname);
-        update_user_meta($user_id, 'created_by', $created_by);
+            $user->set_role($role);
+            wp_update_user($user);
 
-        $res = "Trainer Created";
-        return rest_ensure_response($res);
-    } else {
-        $wpdb_error = $wpdb->last_error;
-        $error_message = 'Cannot create Trainer: ' . $wpdb_error;
-        error_log($error_message); 
+            update_user_meta($user_id, 'last_name', $lastname);
+            update_user_meta($user_id, 'created_by', $created_by);
 
-        return new \WP_Error('cant-create', $error_message, array('status' => 500));
+            update_user_meta($user_id, 'is_active', 1);
+            update_user_meta($user_id, 'is_deleted', 0);
+
+            // $trainer_name = $user_logged_in->first_name . ' ' . $user_logged_in->last_name;
+
+            $table = $wpdb->prefix . 'cohorts';
+            $wpdb->update(
+                $table,
+                array('cohort_trainer' => $user_login . ' ' . $lastname),
+                array('cohort_name' => $cohort_name)
+            );
+
+            $res = "Trainer Created and assigned to Cohort";
+            return rest_ensure_response($res);
+        } else {
+            $wpdb_error = $wpdb->last_error;
+            $error_message = 'Cannot create Trainer: ' . $wpdb_error;
+            error_log($error_message);
+
+            return new \WP_Error('cant-create', $error_message, array('status' => 500));
+        }
     }
-}
+
 
 
     public function get_trainees(){
@@ -322,30 +367,49 @@
     }
 }
 
-    public function view_non_deleted_trainers() {
-    $non_deleted_trainers = get_users(array(
-        'role' => 'trainer',
-        'meta_query' => array(
-            'relation' => 'AND',
-            array(
-                'key'     => 'is_active',
-                'value'   => true,
+    public function get_deleted_trainers()
+    {
+        $args = array(
+            'role' => 'trainer',
+            'meta_query' => array(
+                'relation' => 'AND',
+                array(
+                    'key' => 'is_deleted',
+                    'value' => 1,
+                    'compare' => '=',
+                ),
+                array(
+                    'key' => 'is_active',
+                    'value' => 0,
+                    'compare' => '=',
+                ),
             ),
-            array(
-                'key'     => 'is_deleted',
-                'value'   => false,
-            ),
-        ),
-    ));
+            'orderby' => 'registered',
+            'order' => 'DESC',
+        );
 
-    if (empty($non_deleted_trainers)) {
-        return new \WP_Error('no_non_deleted_trainers', 'No non-deleted trainers found', ['status' => 404]);
+        $trainers = get_users($args);
+
+        $deleted_trainers = array();
+        foreach ($trainers as $trainer) {
+            $trainer_data = array(
+                'id' => $trainer->ID,
+                'username' => $trainer->user_login,
+                'email' => $trainer->user_email,
+                'first_name' => $trainer->first_name,
+                'last_name' => $trainer->last_name,
+                'created_by' => get_user_meta($trainer->ID, 'created_by', true),
+                'is_active' => get_user_meta($trainer->ID, 'is_active', true),
+                'is_deleted' => get_user_meta($trainer->ID, 'is_deleted', true),
+            );
+
+            $deleted_trainers[] = $trainer_data;
+        }
+
+        if ($deleted_trainers) {
+            return $deleted_trainers;
+        } else {
+            return new \WP_Error('cant-get', 'Unable to retrieve deleted trainers', array('status' => 500));
+        }
     }
-
-    if(is_wp_error($non_deleted_trainers)){
-        return new \WP_Error('cant-get', 'Cant get non-deleted trainers', array('status' => 500));
-    }
-    return $non_deleted_trainers;
-}
-
  }
