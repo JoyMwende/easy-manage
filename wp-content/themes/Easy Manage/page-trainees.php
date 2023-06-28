@@ -21,6 +21,8 @@ $totalTasks = get_template_directory_uri() . "/assets/total tasks.png";
 $group = get_template_directory_uri() . "/assets/group.png";
 $progress = get_template_directory_uri() . "/assets/progress.png";
 $account = get_template_directory_uri() . "/assets/account.png";
+$activate = get_template_directory_uri() . "/assets/activate.png";
+$deactivate = get_template_directory_uri() . "/assets/deactivate.png";
 
 if(isset($_POST['logout'])){
     wp_logout();
@@ -29,22 +31,15 @@ if(isset($_POST['logout'])){
 
 global $wpdb;
 
-$query = "
-        SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role, meta3.meta_value AS cohort
-        FROM {$wpdb->users} AS users
-        LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-        LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' 
-        LEFT JOIN {$wpdb->usermeta} AS meta3 ON meta3.user_id = users.ID AND meta3.meta_key = 'cohort' WHERE meta2.meta_value = 'Trainee' 
-    ";
-
-$trainees = $wpdb->get_results($query);
-
 $user_logged_in = wp_get_current_user();
-$user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
-    FROM {$wpdb->users} AS users
-    LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-    LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE id = $user_logged_in->ID")
+$user_role = get_user_meta($user_logged_in->ID, 'wp_capabilities', true);
+$user_role = array_keys($user_role)[0];
 
+$trainees = trainer_get_trainees();
+
+if (isset($_GET['search'])) {
+    $trainees = trainer_search_users();
+}
 
 ?>
 <?php get_header(); ?>
@@ -98,7 +93,7 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                 <img src="<?php echo $account; ?>" alt="">
                 <div class="profile">
                     <h5><?php echo $user_logged_in->user_login; ?></h5>
-                    <p><?php echo $user_role->role; ?></p>
+                    <p><?php echo $user_role; ?></p>
                 </div>
             </div>
         </div>
@@ -126,9 +121,19 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
 
         <hr>
         <div class="search-bar">
-            <img src="<?php echo $search; ?>" alt="">
-            <input type="search" name="search" id="search" placeholder="Search Trainees">
-        </div>
+            <form action="" method="get">
+                <label for="search">
+                    <img src="<?php echo $searchimg; ?>" alt="" onclick="performSearch()">
+                </label>
+                <input type="search" name="search" id="search" placeholder="Search any user">
+            </form>
+            </div>
+            
+            <script>
+                function performSearch() {
+                    document.querySelector('form').submit();
+                }
+            </script>
         <div class="assigned-tasks-table">
             <h3>Trainees</h3>
             <table class="table">
@@ -138,17 +143,42 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                         <th>Second Name</th>
                         <th>Email</th>
                         <th>Cohort</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody class="tasks-body">
-                    <?php foreach($trainees as $trainee): ?>
+                    <?php if(empty($trainees)){ ?>
+                        <tr>
+                            <td colspan="5">No trainees found</td>
+                        </tr>
+                    <?php } else { foreach($trainees as $trainee): ?>
                     <tr>
                         <td><?php echo $trainee->firstname; ?></td>
                         <td><?php echo $trainee->lastname; ?></td>
                         <td><?php echo $trainee->email; ?></td>
                         <td><?php echo $trainee->cohort; ?></td>
-                    </tr>
+                        <td class="tasksbtn">
+                                <form action="" method="post">
+                                    <input type="hidden" name="ID" value="<?php echo $trainee->ID; ?>">
+                                    <?php if ($trainee->is_active == 1 && $trainee->is_deleted == 0) { ?>
+                                        <button type="submit" name="deactivatebtn">
+                                            <img src="<?php echo $deactivate; ?>" alt="">
+                                            Deactivate
+                                        </button>
+                                    <?php } else if ($trainee->is_active == 0 && $trainee->is_deleted == 0) { ?>
+                                            <button type="submit" name="activatebtn">
+                                                <img src="<?php echo $activate; ?>" alt="">
+                                                Activate
+                                            </button>
+                                        <?php } else {
+                                        echo "Invalid status";
+                                    } ?>
+                                </form>
+                        
+                            </td>
+                        </tr>
                     <?php endforeach; ?>
+                    <?php } ?>
                 </tbody>
             </table>
         </div>

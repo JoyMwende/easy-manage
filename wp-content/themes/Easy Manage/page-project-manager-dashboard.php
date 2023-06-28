@@ -17,35 +17,38 @@ $plus = get_template_directory_uri() . "/assets/add.png";
 $logoutDark = get_template_directory_uri() . "/assets/logout-dark.png";
 
 
-$search = get_template_directory_uri() . "/assets/search.png";
+$searchimg = get_template_directory_uri() . "/assets/search.png";
 $totalTasks = get_template_directory_uri() . "/assets/total tasks.png";
 $group = get_template_directory_uri() . "/assets/group.png";
 $progress = get_template_directory_uri() . "/assets/progress.png";
 $account = get_template_directory_uri() . "/assets/account.png";
 
 
-if(isset($_POST['logout'])){
+if (isset($_POST['logout'])) {
     wp_logout();
     wp_redirect('/easy-manage/login');
 }
 
 global $wpdb;
 
-$query = "
-        SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
-        FROM {$wpdb->users} AS users
-        LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-        LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE meta2.meta_value = 'Trainer' 
-    ";
-
-$trainers = $wpdb->get_results($query);
-$total_trainers = count($trainers);
-
 $user_logged_in = wp_get_current_user();
-$user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
-    FROM {$wpdb->users} AS users
-    LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-    LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE id = $user_logged_in->ID")
+$user_role = get_user_meta($user_logged_in->ID, 'wp_capabilities', true);
+$user_role = array_keys($user_role)[0];
+
+$total_trainers = count_total_trainers_pm();
+$total_trainees = count_total_trainees_pm();
+$total_tasks = count_total_tasks_pm();
+
+$latest_created_tasks = fetch_latest_created_tasks_pm();
+
+$table = $wpdb->prefix . 'users';
+
+if (isset($_GET['search'])) {
+    $search = $_GET['search'];
+    $users = $wpdb->get_results("SELECT * FROM $table WHERE username LIKE '%$search%'");
+    $tasks = $wpdb->get_results("SELECT * FROM $table WHERE task_title LIKE '%$search%'");
+
+}
 
 ?>
 <?php get_header(); ?>
@@ -96,11 +99,15 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                 </article>
             </div>
             <div class="account-new">
-                    <img src="<?php echo $account; ?>" alt="">
-                    <div class="profile">
-                        <h5><?php echo $user_logged_in->user_login; ?></h5>
-                        <p><?php echo $user_role->role; ?></p>
-                    </div>
+                <img src="<?php echo $account; ?>" alt="">
+                <div class="profile">
+                    <h5>
+                        <?php echo $user_logged_in->user_login; ?>
+                    </h5>
+                    <p>
+                        <?php echo $user_role; ?>
+                    </p>
+                </div>
             </div>
         </div>
     </div>
@@ -110,17 +117,21 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
         <div class="main-trainee-nav">
             <nav class="trainee-nav">
                 <div class="trainee-welcome-text">
-                    <h3>Welcome, <?php echo $user_logged_in->user_login; ?></h3>
-                    <p><?php
+                    <h3>Welcome,
+                        <?php echo $user_logged_in->user_login; ?>
+                    </h3>
+                    <p>
+                        <?php
                         $current_date = date('l, j F Y');
                         echo "Today is " . $current_date;
-                    ?></p>
+                        ?>
+                    </p>
                 </div>
                 <div class="btnadd">
                     <a href="/easy-manage/add-trainer"><button type="submit">
-                        <img src="<?php echo $plus; ?>" alt="">
-                        New Trainer
-                    </button></a>
+                            <img src="<?php echo $plus; ?>" alt="">
+                            New Trainer
+                        </button></a>
                 </div>
             </nav>
         </div>
@@ -128,11 +139,22 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
         <hr>
 
         <div class="search-bar">
-            <img src="<?php echo $search; ?>" alt="">
-            <input type="search" name="search" id="search" placeholder="Search trainees, trainers, tasks etc.">
+            <form action="" method="get">
+                <label for="search">
+                    <img src="<?php echo $searchimg; ?>" alt="" onclick="performSearch()">
+                </label>
+                <input type="search" name="search" id="search" placeholder="Search trainees, trainers, tasks etc.">
+            </form>
         </div>
 
-        <div class="page-content">
+        <script>
+            function performSearch() {
+                document.querySelector('form').submit();
+            }
+        </script>
+
+
+        <div class="ms-2">
             <div class="new-tasks-count-box">
                 <div class="new-tasks-count shadow-sm">
                     <section class="tasks-img">
@@ -140,7 +162,8 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     </section>
                     <section class="tasks-nums">
                         <p>Total Trainers</p>
-                        <h3><?php echo $total_trainers; ?> Trainers</h5>
+                        <h3>
+                            <?php echo $total_trainers; ?> Trainers</h5>
                     </section>
                 </div>
                 <div class="new-tasks-count shadow-sm">
@@ -149,7 +172,8 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     </section>
                     <section class="tasks-nums">
                         <p>Total Trainees</p>
-                        <h3>20 Trainees</h5>
+                        <h3>
+                            <?php echo $total_trainees; ?> Trainees</h5>
                     </section>
                 </div>
                 <div class="new-tasks-count shadow-sm">
@@ -158,7 +182,8 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     </section>
                     <section class="tasks-nums">
                         <p>Total Tasks Created</p>
-                        <h3>50 Tasks</h5>
+                        <h3>
+                            <?php echo $total_tasks; ?> Tasks</h5>
                     </section>
                 </div>
             </div>
@@ -176,21 +201,19 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>Sample Title</td>
-                        <td>Lorem ipsum dolor sit amet, consectetur adipiscing elit</td>
-                        <td>15/06/2023</td>
-                    </tr>
-                    <tr>
-                        <td>Sample Title</td>
-                        <td>Lorem ipsum dolor sit amet, consectetur adipiscing elit</td>
-                        <td>15/06/2023</td>
-                    </tr>
-                    <tr>
-                        <td>Sample Title</td>
-                        <td>Lorem ipsum dolor sit amet, consectetur adipiscing elit</td>
-                        <td>15/06/2023</td>
-                    </tr>
+                    <?php foreach ($latest_created_tasks as $task) { ?>
+                        <tr>
+                            <td>
+                                <?php echo $task->task_title; ?>
+                            </td>
+                            <td>
+                                <?php echo $task->task_desc; ?>
+                            </td>
+                            <td>
+                                <?php echo $task->duedate; ?>
+                            </td>
+                        </tr>
+                    <?php } ?>
                 </tbody>
             </table>
         </div>

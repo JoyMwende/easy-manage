@@ -28,11 +28,10 @@ global $errormsg;
 $successmsg = false;
 $errormsg = false;
 
+
 $user_logged_in = wp_get_current_user();
-$user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
-        FROM {$wpdb->users} AS users
-        LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-        LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'wp_capabilities' WHERE id = $user_logged_in->ID");
+$user_role = get_user_meta($user_logged_in->ID, 'wp_capabilities', true);
+$user_role = array_keys($user_role)[0];
 
 // $user_logged_data = $loggged_in_user->user_email;
 
@@ -80,7 +79,7 @@ if (isset($_POST['createtraineebtn'])) {
 
     if (empty($firstnameError) && empty($lastnameError) && empty($emailError) && empty($roleError) && empty($cohortnameError) && empty($passwordError)) {
 
-        $token = isset($GLOBALS['token']) ? $GLOBALS['token'] : '';
+        $token = isset($_COOKIE['token']) ? $_COOKIE['token'] : '';
 
 
         if (!empty($token)) {
@@ -186,7 +185,7 @@ if (isset($_POST['createtraineebtn'])) {
                         <?php echo $user_logged_in->user_login; ?>
                     </h5>
                     <p>
-                        <?php echo $user_role->role; ?>
+                        <?php echo $user_role; ?>
                     </p>
                 </div>
             </div>

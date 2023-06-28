@@ -10,7 +10,7 @@ function easymanagetheme_script_enqueue()
     wp_enqueue_script('jsbootstrap');
 
     wp_enqueue_style('style', get_template_directory_uri() . '/style.css', [], '1.0', 'all');
-    wp_enqueue_script('main-script', get_template_directory_uri() . '/script.js', [], false, true);
+    // wp_enqueue_script('main-script', get_template_directory_uri() . '/script.js', [], false, true);
 }
 add_action('wp_enqueue_scripts', 'easymanagetheme_script_enqueue');
 
@@ -41,75 +41,96 @@ function test_input($data)
 function validate_login_form()
 {
     $emailError = $passwordError = '';
-    $email = '';
-    $password = '';
-
-    if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        if (empty($_POST['email'])) {
-            $emailError = "Email is required!";
-        } else {
-            $email = test_input($_POST['email']);
-            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $emailError = "Invalid email format!";
-            }
-        }
-
-        if (empty($_POST['password'])) {
-            $passwordError = "Password is required!";
-        } else {
-            $password = test_input($_POST['password']);
-        }
-
-        // Perform additional validation or processing as needed
-        if (empty($emailError) && empty($passwordError)) {
-            // Form is valid, perform further processing
-            // For example, authenticate user or redirect to a specific page
-            wp_redirect('/easy-manage/trainee-dashboard');
-        }
-    }
 
     if (isset($_POST['loginbtn'])) {
         $email = $_POST['email'];
         $password = $_POST['password'];
 
-        $user = wp_authenticate($email, $password);
-
-        if (is_wp_error($user)) {
-            echo 'Invalid login credentials';
+        if (empty($email)) {
+            $emailError = 'Email is required';
         } else {
-            $user_id = $user->ID;
-            $user_login = $user->user_login;
-
-            wp_set_current_user($user_id, $user_login);
-            wp_set_auth_cookie($user_id);
-            do_action('wp_login', $user_login);
-
-            $user_roles = $user->roles;
-
-            switch ($user_roles[0]) {
-                case 'administrator':
-                    wp_redirect('/easy-manage/admin-dashboard');
-                    break;
-                case 'project_manager':
-                    wp_redirect('/easy-manage/project-manager-dashboard');
-                    break;
-                case 'trainer':
-                    wp_redirect('/easy-manage/trainer-dashboard');
-                    break;
-                case 'trainee':
-                    wp_redirect('/easy-manage/trainee-dashboard');
-                    break;
-                default:
-                    echo 'Invalid login credentials';
-                    break;
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $emailError = "Invalid email format!";
             }
+        }
 
-            exit;
+        if (empty($password)) {
+            $passwordError = 'Password is required';
+        }
+
+        if (empty($emailError) && empty($passwordError)) {
+            $args = array(
+                'method' => 'POST',
+                'headers' => array(
+                    'Content-Type' => 'application/json',
+                ),
+                'body' => json_encode(
+                    array(
+                        'username' => $email,
+                        'password' => $password
+                    )
+                )
+            );
+
+            $response = wp_remote_post('http://localhost/easy-manage/wp-json/jwt-auth/v1/token', $args);
+
+
+            if (is_wp_error($response)) {
+                $error_message = $response->get_error_message();
+                echo 'Error: ' . $error_message;
+                return;
+            } else {
+                $response_body = wp_remote_retrieve_body($response);
+                $response_data = json_decode($response_body, true);
+
+                if (isset($response_data['token'])) {
+                    $token = $response_data['token'];
+                    setcookie('token', $token, time() + (86400 * 30), '/', 'localhost');
+
+                    // echo '<pre>';
+                    // var_dump($token);
+                    // echo '</pre>';
+
+                    $user = wp_authenticate($email, $password);
+
+                    if (is_wp_error($user)) {
+                        echo 'Invalid login credentials';
+                    } else {
+                        $user_id = $user->ID;
+                        $user_login = $user->user_login;
+
+                        wp_set_current_user($user_id, $user_login);
+                        wp_set_auth_cookie($user_id);
+                        do_action('wp_login', $user_login);
+
+                        $user_roles = $user->roles;
+
+                        switch ($user_roles[0]) {
+                            case 'administrator':
+                                wp_redirect('/easy-manage/admin-dashboard');
+                                break;
+                            case 'project_manager':
+                                wp_redirect('/easy-manage/project-manager-dashboard');
+                                break;
+                            case 'trainer':
+                                wp_redirect('/easy-manage/trainer-dashboard');
+                                break;
+                            case 'trainee':
+                                wp_redirect('/easy-manage/trainee-dashboard');
+                                break;
+                            default:
+                                echo 'Invalid login credentials';
+                                break;
+                        }
+
+                        exit;
+                    }
+                } else {
+                    echo 'Invalid login credentials';
+                }
+            }
         }
     }
-
-
-
 
     // Display the login form with validation errors
     $login = '';
@@ -122,7 +143,7 @@ function validate_login_form()
                     <div class="login-field">
                         <label>Email<span style="color: red;">*</span></label>
                         <div class="input">
-                            <input type="email" name="email" id="email" placeholder="Enter your email" value="' . esc_attr($email) . '">
+                            <input type="email" name="email" id="email" placeholder="Enter your email" value="">
                             <span class="error" style="color: red;">' . esc_html($emailError) . '</span>
                         </div>
                     </div>
@@ -144,72 +165,6 @@ function validate_login_form()
     echo $login;
 }
 add_shortcode('login', 'validate_login_form');
-
-
-//fetch users
-
-function fetch_all_users()
-{
-    global $wpdb;
-
-    $users = [];
-
-    $query = "
-        SELECT users.user_login , users.user_email, meta1.meta_value AS lastname, meta2.meta_value AS role
-        FROM {$wpdb->users} AS users
-        LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-        LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role'
-    ";
-
-    $results = $wpdb->get_results($query);
-
-    foreach ($results as $result) {
-        $userdata = [
-            'user_login' => $result->user_login,
-            'user_email' => $result->user_email,
-            'lastname' => $result->lastname,
-            'role' => $result->role,
-        ];
-
-        $users[] = $userdata;
-    }
-
-    return $users;
-    // var_dump($users);
-}
-
-
-function fetch_user()
-{
-    $current_user = [];
-    $user = wp_get_current_user();
-    $current_user['email'] = $user->user_email;
-    $id = $user->ID;
-    $current_user['id'] = $user->ID;
-    $current_user['firstname'] = $user->user_login;
-    $user_meta = get_user_meta($id);
-    $lastname = $user_meta['last_name'][0];
-    $current_user['lastname'] = $lastname;
-    $role = $user_meta['role'][0];
-    $current_user['role'] = $role;
-
-    return $current_user;
-}
-
-function update_user_data($user_id, $meta_key, $meta_value)
-{
-    try {
-        if (isset($meta_value)) {
-            $response = update_user_meta($user_id, $meta_key, $meta_value);
-            return $response ? true : false;
-        }
-        return false;
-    } catch (Exception $e) {
-        echo "An error occurred while updating user data";
-        return false;
-    }
-}
-
 
 //limit login attempts for admin dashboard
 global $transient_value;
@@ -281,25 +236,25 @@ function convert_to_seconds($seconds)
 }
 
 //limit login attempts
-function limit_user_login_attempts()
-{
-    $login_email = $_POST['email'];
-    $login_password = $_POST['password'];
-    $login_attempts = get_option('login_attempts');
-    if ($login_attempts) {
-        $login_attempts = $login_attempts + 1;
-        update_option('login_attempts', $login_attempts);
-    } else {
-        update_option('login_attempts', 1);
-    }
-    if ($login_attempts > 3) {
-        $login_attempts = 0;
-        update_option('login_attempts', $login_attempts);
-        wp_die('You have exceeded the number of login attempts. Please try again in 5 minutes');
-    }
-}
+// function limit_user_login_attempts()
+// {
+//     $login_email = $_POST['email'];
+//     $login_password = $_POST['password'];
+//     $login_attempts = get_option('login_attempts');
+//     if ($login_attempts) {
+//         $login_attempts = $login_attempts + 1;
+//         update_option('login_attempts', $login_attempts);
+//     } else {
+//         update_option('login_attempts', 1);
+//     }
+//     if ($login_attempts > 3) {
+//         $login_attempts = 0;
+//         update_option('login_attempts', $login_attempts);
+//         wp_die('You have exceeded the number of login attempts. Please try again in 5 minutes');
+//     }
+// }
 
-add_action('wp_login_failed', 'limit_login_attempts');
+// add_action('wp_login_failed', 'limit_login_attempts');
 
 // function redirect_after_logout(){
 //     wp_redirect(home_url());
@@ -351,26 +306,20 @@ add_action('init', 'add_users');
 
 //connecting with REST API
 global $token;
-$token = isset($GLOBALS['token']) ? $GLOBALS['token'] : '';
 
 
 //GET Requests
 function count_total_users()
 {
-    $token = isset($GLOBALS['token']) ? $GLOBALS['token'] : '';
+    $token = $_COOKIE['token'];
 
-    $url = 'https://easy-manage.com/wp-json/easymanage/v1/total-users';
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v1/total-users';
     $args = array(
         'method' => 'GET',
-        'timeout' => '5',
-        'redirection' => '5',
-        'httpversion' => '1.0',
-        'blocking' => true,
         'headers' => array(
             'Authorization' => 'Bearer ' . $token,
             'Content-Type' => 'application/json'
-        ),
-        'body' => null,
+        )
     );
 
     $response = wp_remote_request($url, $args);
@@ -398,64 +347,1362 @@ function count_total_users()
 
 function count_total_project_managers()
 {
-    $result = wp_remote_get('http://localhost/easy-manage/wp-json/easymanage/v1/total-project-managers', [
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v1/total-project-managers';
+    $args = array(
         'method' => 'GET',
-        'headers' => ['Authorization => Bearer ' . $GLOBALS['token']]
-    ]);
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
 
-    $response = json_decode(wp_remote_retrieve_body($result));
+    $response = wp_remote_request($url, $args);
 
-    if ($response) {
-        return $response;
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
     } else {
-        echo "No project managers found";
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No Project Managers found';
     }
 }
 
 function count_total_trainers()
 {
-    $result = wp_remote_get('http://localhost/easy-manage/wp-json/easymanage/v1/total-trainers', [
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v1/total-trainers';
+    $args = array(
         'method' => 'GET',
-        'headers' => ['Authorization => Bearer ' . $GLOBALS['token']]
-    ]);
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
 
-    $response = json_decode(wp_remote_retrieve_body($result));
+    $response = wp_remote_request($url, $args);
 
-    if ($response) {
-        return $response;
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
     } else {
-        echo "No trainers found";
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No trainers found';
     }
 }
 
 function count_total_trainees()
 {
-    $result = wp_remote_get('http://localhost/easy-manage/wp-json/easymanage/v1/total-trainees', [
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v1/total-trainees';
+    $args = array(
         'method' => 'GET',
-        'headers' => ['Authorization => Bearer ' . $GLOBALS['token']]
-    ]);
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
 
-    $response = json_decode(wp_remote_retrieve_body($result));
+    $response = wp_remote_request($url, $args);
 
-    if ($response) {
-        return $response;
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
     } else {
-        echo "No trainees found";
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No trainees found';
     }
 }
 
 function count_total_tasks()
 {
-    $result = wp_remote_get('http://localhost/easy-manage/wp-json/easymanage/v1/total-tasks', [
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v1/total-tasks';
+    $args = array(
         'method' => 'GET',
-        'headers' => ['Authorization => Bearer ' . $GLOBALS['token']]
-    ]);
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
 
-    $response = json_decode(wp_remote_retrieve_body($result));
+    $response = wp_remote_request($url, $args);
 
-    if ($response) {
-        return $response;
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
     } else {
-        echo "No tasks found";
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No tasks found';
+    }
+}
+
+function admin_get_tasks()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v1/tasks';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No tasks found';
+    }
+}
+
+function admin_get_single_task()
+{
+    $token = $_COOKIE['token'];
+    $task_id = $_GET['id'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v1/tasks/' . $task_id;
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No task found';
+    }
+}
+
+
+function fetch_users()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v1/users';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No users found';
+    }
+}
+
+function pm_get_tasks(){
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v2/tasks';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No tasks found';
+    }
+}
+
+function pm_get_single_task(){
+    $token = $_COOKIE['token'];
+    $task_id = $_GET['id'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v2/tasks/' . $task_id;
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No task found';
+    }
+}
+
+function pm_get_trainers(){
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v2/trainers';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No trainers found';
+    }
+}
+
+function pm_get_trainees(){
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v2/trainees';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No trainees found';
+    }
+}
+
+function count_total_trainees_pm()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v2/total-trainees';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No trainees found';
+    }
+}
+
+function count_total_tasks_pm()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v2/total-tasks';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No tasks found';
+    }
+}
+
+function count_total_trainers_pm()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v2/total-trainers';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No trainers found';
+    }
+}
+
+function count_total_trainees_trainer()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v4/total-trainees';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No trainees found';
+    }
+}
+
+function count_total_tasks_trainer()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v4/total-tasks';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No tasks found';
+    }
+}
+
+function count_total_submitted_tasks()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v4/total-submitted-tasks';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No tasks found';
+    }
+}
+
+function count_total_tasks_in_progress()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v4/total-tasks-in-progress';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No tasks found';
+    }
+}
+
+function trainer_get_tasks()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v4/tasks';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No tasks found';
+    }
+}
+
+function trainer_get_single_task()
+{
+    $token = $_COOKIE['token'];
+    $task_id = $_GET['id'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v4/tasks/' . $task_id;
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No task found';
+    }
+}
+
+function trainer_get_trainees()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v4/trainees';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No trainees found';
+    }
+}
+
+function get_assigned_tasks()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v3/assignedtasks';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No trainees found';
+    }
+}
+
+function get_completed_tasks()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v3/completedtasks';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No trainees found';
+    }
+}
+
+function trainee_get_single_task()
+{
+    $token = $_COOKIE['token'];
+    $task_id = $_GET['id'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v3/assignedtasks/' . $task_id;
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No task found';
+    }
+}
+
+function count_total_assigned_tasks()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v3/assignedtasks/count';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No users found';
+    }
+}
+
+function count_total_started_tasks()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v3/startedtasks/count';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No users found';
+    }
+}
+
+function count_total_completed_tasks()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v3/completedtasks/count';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No users found';
+    }
+}
+
+function count_total_group_tasks()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v3/assignedtasks/countgroup';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No users found';
+    }
+}
+
+function fetch_latest_created_tasks()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v4/latest-created-tasks';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No users found';
+    }
+}
+
+function fetch_latest_created_tasks_pm()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v2/latest-created-tasks';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No users found';
+    }
+}
+
+function fetch_latest_submitted_tasks()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v4/latest-submitted-tasks';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No users found';
+    }
+}
+
+function fetch_cohorts()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v2/latest-created-tasks';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No users found';
+    }
+}
+
+
+function admin_search_users()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v1/search-users?search=' . $_GET['search'];
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No users found';
+    }
+}
+
+function pm_search_users()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v2/search-users?search=' . $_GET['search'];
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No users found';
+    }
+}
+
+function trainer_search_users()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v4/search-users?search=' . $_GET['search'];
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No users found';
+    }
+}
+
+function trainee_search_users()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v3/search-users?search=' . $_GET['search'];
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No users found';
+    }
+}
+
+function admin_search_tasks()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v1/search-tasks?search=' . $_GET['search'];
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No users found';
+    }
+}
+
+function pm_search_tasks()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v2/search-tasks?search=' . $_GET['search'];
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No users found';
+    }
+}
+
+function trainer_search_tasks()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v4/search-tasks?search=' . $_GET['search'];
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No users found';
+    }
+}
+
+function newest_tasks()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v3/newesttasks';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No users found';
     }
 }

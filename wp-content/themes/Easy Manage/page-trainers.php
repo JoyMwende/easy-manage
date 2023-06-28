@@ -16,7 +16,7 @@ $trainersimg = get_template_directory_uri() . "/assets/trainer.png";
 $plus = get_template_directory_uri() . "/assets/add.png";
 $logoutDark = get_template_directory_uri() . "/assets/logout-dark.png";
 $account = get_template_directory_uri() . "/assets/account.png";
-$search = get_template_directory_uri() . "/assets/search.png";
+$searchimg = get_template_directory_uri() . "/assets/search.png";
 
 if(isset($_POST['logout'])){
     wp_logout();
@@ -25,22 +25,15 @@ if(isset($_POST['logout'])){
 
 global $wpdb;
 
-
-$query = "
-        SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
-        FROM {$wpdb->users} AS users
-        LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-        LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE meta2.meta_value = 'Trainer' 
-    ";
-
-$trainers = $wpdb->get_results($query);
-
 $user_logged_in = wp_get_current_user();
-$user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
-    FROM {$wpdb->users} AS users
-    LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-    LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE id = $user_logged_in->ID")
+$user_role = get_user_meta($user_logged_in->ID, 'wp_capabilities', true);
+$user_role = array_keys($user_role)[0];
 
+$trainers = pm_get_trainers();
+
+if (isset($_GET['search'])) {
+    $trainers = pm_search_users();
+}
 
 ?>
 <?php get_header(); ?>
@@ -94,7 +87,7 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                 <img src="<?php echo $account; ?>" alt="">
                 <div class="profile">
                     <h5><?php echo $user_logged_in->user_login; ?></h5>
-                    <p><?php echo $user_role->role; ?></p>
+                    <p><?php echo $user_role; ?></p>
                 </div>
             </div>
         </div>
@@ -122,9 +115,19 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
 
         <hr>
         <div class="search-bar mb-1">
-            <img src="<?php echo $search; ?>" alt="">
-            <input type="search" name="search" id="search" placeholder="Search Trainers">
-        </div>
+            <form action="" method="get">
+                <label for="search">
+                    <img src="<?php echo $searchimg; ?>" alt="" onclick="performSearch()">
+                </label>
+                <input type="search" name="search" id="search" placeholder="Search any user">
+            </form>
+            </div>
+            
+            <script>
+                function performSearch() {
+                    document.querySelector('form').submit();
+                }
+            </script>
         <div class="assigned-tasks-table">
             <h3>Trainers</h3>
             <table class="table">
@@ -133,16 +136,23 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                         <th>First Name</th>
                         <th>Second Name</th>
                         <th>Email</th>
+                        <!-- <th>Cohort</th> -->
                     </tr>
                 </thead>
                 <tbody class="tasks-body">
-                    <?php foreach($trainers as $trainer): ?>
+                    <?php if (empty($trainers)){ ?>
+                    <tr>
+                        <td colspan="4">No trainers found</td>
+                    </tr>
+                    <?php } else { foreach($trainers as $trainer): ?>
                     <tr>
                         <td><?php echo $trainer->firstname; ?></td>
                         <td><?php echo $trainer->lastname; ?></td>
                         <td><?php echo $trainer->email; ?></td>
+                        <!-- <td><?php //echo $trainer->cohort; ?></td> -->
                     </tr>
                     <?php endforeach; ?>
+                    <?php } ?>
                 </tbody>
             </table>
         </div>

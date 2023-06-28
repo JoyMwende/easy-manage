@@ -30,11 +30,20 @@ if(isset($_POST['logout'])){
 global $wpdb;
 
 $user_logged_in = wp_get_current_user();
-$user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
-    FROM {$wpdb->users} AS users
-    LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-    LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE id = $user_logged_in->ID")
+$user_role = get_user_meta($user_logged_in->ID, 'wp_capabilities', true);
+$user_role = array_keys($user_role)[0];
 
+$total_assigned_tasks = count_total_assigned_tasks();
+
+$total_started_tasks = count_total_started_tasks();
+
+$total_completed_tasks = count_total_completed_tasks();
+
+$total_group_tasks = count_total_group_tasks();
+
+$newest_tasks = newest_tasks();
+
+$recent_tasks = get_assigned_tasks();
 
 ?>
 <?php get_header(); ?>
@@ -92,7 +101,7 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     <img src="<?php echo $account; ?>" alt="">
                     <div class="profile">
                         <h4><?php echo $user_logged_in->user_login; ?></h4>
-                        <p><?php echo $user_role->role; ?></p>
+                        <p><?php echo $user_role; ?></p>
                     </div>
                 </div>
             </nav>
@@ -107,7 +116,7 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     </section>
                     <section class="tasks-nums">
                         <p>Total Tasks</p>
-                        <h3>10 Tasks</h5>
+                        <h3><?php echo $total_assigned_tasks; ?> Tasks</h5>
                     </section>
                 </div>
                 <div class="tasks-count shadow-sm">
@@ -116,7 +125,7 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     </section>
                     <section class="tasks-nums">
                         <p>Group Tasks</p>
-                        <h3>5 Tasks</h5>
+                        <h3><?php echo $total_group_tasks; ?> Tasks</h5>
                     </section>
                 </div>
                 <div class="tasks-count shadow-sm">
@@ -125,7 +134,7 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     </section>
                     <section class="tasks-nums">
                         <p>Completed Tasks</p>
-                        <h3>6 Tasks</h5>
+                        <h3><?php echo $total_completed_tasks; ?> Tasks</h5>
                     </section>
                 </div>
                 <div class="tasks-count shadow-sm">
@@ -134,7 +143,7 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     </section>
                     <section class="tasks-nums">
                         <p>Tasks in Progress</p>
-                        <h3>4 Tasks</h5>
+                        <h3><?php echo $total_started_tasks; ?> Tasks</h5>
                     </section>
                 </div>
             </div>
@@ -161,27 +170,15 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
 
             <div class="newest-tasks">
                 <div><h3>Newest Tasks</h3></div>
+                <?php foreach($newest_tasks as $newest_task): ?>
                 <div class="newest">
                     <img src="<?php echo $new; ?>" alt="">
                     <div class="newest-content">
-                        <h5>Task Name</h5>
-                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit...</p>
+                        <h5><?php echo $newest_task->task_title; ?></h5>
+                        <p><?php echo $newest_task->task_desc; ?></p>
                     </div>
                 </div>
-                <div class="newest">
-                    <img src="<?php echo $new; ?>" alt="">
-                    <div class="newest-content">
-                        <h5>Task Name</h5>
-                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit...</p>
-                    </div>
-                </div>
-                <div class="newest">
-                    <img src="<?php echo $new; ?>" alt="">
-                    <div class="newwest-content">
-                        <h5>Task Name</h5>
-                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit...</p>
-                    </div>
-                </div>
+                <?php endforeach; ?>
             </div>
         </div>
 
@@ -197,21 +194,13 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     </tr>
                 </thead>
                 <tbody>
+                    <?php foreach($recent_tasks as $recent_task): ?>
                     <tr>
-                        <td>Sample Title</td>
-                        <td>Lorem ipsum dolor sit amet, consectetur adipiscing elit</td>
-                        <td>15/06/2023</td>
+                        <td><?php echo $recent_task->task_title; ?></td>
+                        <td><?php echo $recent_task->task_desc; ?></td>
+                        <td><?php echo $recent_task->duedate; ?></td>
                     </tr>
-                    <tr>
-                        <td>Sample Title</td>
-                        <td>Lorem ipsum dolor sit amet, consectetur adipiscing elit</td>
-                        <td>15/06/2023</td>
-                    </tr>
-                    <tr>
-                        <td>Sample Title</td>
-                        <td>Lorem ipsum dolor sit amet, consectetur adipiscing elit</td>
-                        <td>15/06/2023</td>
-                    </tr>
+                    <?php endforeach; ?>
                 </tbody>
             </table>
         </div>

@@ -16,14 +16,15 @@ $addTraineeDark = get_template_directory_uri() . "/assets/add-user-dark.png";
 $plus = get_template_directory_uri() . "/assets/add.png";
 $logoutDark = get_template_directory_uri() . "/assets/logout-dark.png";
 
-$search = get_template_directory_uri() . "/assets/search.png";
+$searchimg = get_template_directory_uri() . "/assets/search.png";
 $totalTasks = get_template_directory_uri() . "/assets/total tasks.png";
 $group = get_template_directory_uri() . "/assets/group.png";
 $progress = get_template_directory_uri() . "/assets/progress.png";
+$completed = get_template_directory_uri() . "/assets/completed.png";
 $account = get_template_directory_uri() . "/assets/account.png";
 $notstarted = get_template_directory_uri() . "/assets/not-started.png";
 
-if(isset($_POST['logout'])){
+if (isset($_POST['logout'])) {
     wp_logout();
     wp_redirect('/easy-manage/login');
 }
@@ -31,11 +32,14 @@ if(isset($_POST['logout'])){
 global $wpdb;
 
 $user_logged_in = wp_get_current_user();
-$user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
-    FROM {$wpdb->users} AS users
-    LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-    LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE id = $user_logged_in->ID")
+$user_role = get_user_meta($user_logged_in->ID, 'wp_capabilities', true);
+$user_role = array_keys($user_role)[0];
 
+$tasks = trainer_get_tasks();
+
+if (isset($_GET['search'])) {
+    $tasks = trainer_search_tasks();
+}
 
 ?>
 <?php get_header(); ?>
@@ -88,8 +92,12 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
             <div class="account-new">
                 <img src="<?php echo $account; ?>" alt="">
                 <div class="profile">
-                    <h5><?php echo $user_logged_in->user_login; ?></h5>
-                    <p><?php echo $user_role->role; ?></p>
+                    <h5>
+                        <?php echo $user_logged_in->user_login; ?>
+                    </h5>
+                    <p>
+                        <?php echo $user_role; ?>
+                    </p>
                 </div>
             </div>
         </div>
@@ -100,11 +108,15 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
         <div class="main-trainee-nav">
             <nav class="trainee-nav">
                 <div class="trainee-welcome-text">
-                    <h3>Welcome, <?php echo $user_logged_in->user_login; ?></h3>
-                    <p><?php
+                    <h3>Welcome,
+                        <?php echo $user_logged_in->user_login; ?>
+                    </h3>
+                    <p>
+                        <?php
                         $current_date = date('l, j F Y');
                         echo "Today is " . $current_date;
-                    ?></p>
+                        ?>
+                    </p>
                 </div>
                 <div class="btnadd">
                     <a href="/easy-manage/add-task"><button type="submit">
@@ -117,9 +129,20 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
 
         <hr>
         <div class="search-bar">
-            <img src="<?php echo $search; ?>" alt="">
-            <input type="search" name="search" id="search" placeholder="Search Tasks">
+            <form action="" method="get">
+                <label for="search">
+                    <img src="<?php echo $searchimg; ?>" alt="" onclick="performSearch()">
+                </label>
+                <input type="search" name="search" id="search" placeholder="Search tasks">
+            </form>
         </div>
+        
+        <script>
+            function performSearch() {
+                document.querySelector('form').submit();
+            }
+        </script>
+
         <div class="assigned-tasks-table">
             <h3>All Tasks</h3>
             <table class="table table-hover">
@@ -133,37 +156,42 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     </tr>
                 </thead>
                 <tbody class="tasks-body">
-                    <tr onclick="location.href='/easy-manage/trainer-single-task/';" style="cursor: pointer;">
-                        <td>Sample Title</td>
-                        <td>Lorem ipsum dolor sit amet, consectetur adipiscing...</td>
-                        <td>Joy</td>
-                        <td>15/06/2023</td>
-                        <td class="tasksbtn"><button type="submit">
-                                <img src="<?php echo $notstarted; ?>" alt="">
-                                Start
-                            </button></td>
-                    </tr>
-                    </a>
-                    <tr onclick="location.href='/easy-manage/trainer-single-task/';" style="cursor: pointer;">
-                        <td>Sample Title</td>
-                        <td>Lorem ipsum dolor sit amet, consectetur adipiscing...</td>
-                        <td>Joy, Janice</td>
-                        <td>15/06/2023</td>
-                        <td class="tasksbtn"><button type="submit">
-                                <img src="<?php echo $progress; ?>" alt="">
-                                In progress
-                            </button></td>
-                    </tr>
-                    <tr onclick="location.href='/easy-manage/trainer-single-task/';" style="cursor: pointer;">
-                        <td>Sample Title</td>
-                        <td>Lorem ipsum dolor sit amet, consectetur adipiscing...</td>
-                        <td>Victory</td>
-                        <td>15/06/2023</td>
-                        <td class="tasksbtn"><button type="submit">
-                                <img src="<?php echo $notstarted; ?>" alt="">
-                                Start
-                            </button></td>
-                    </tr>
+                    <?php if(empty($tasks)){ ?>
+                        <tr>
+                            <td colspan="5" style="text-align: center;">No tasks found</td>
+                        </tr>
+                    <?php } else { foreach ($tasks as $task): ?>
+                        <tr onclick="location.href='/easy-manage/trainer-single-task/?id=<?php echo $task->id; ?>';"
+                            style="cursor: pointer;">
+                            <td>
+                                <?php echo $task->task_title; ?>
+                            </td>
+                            <td style="width: 23vw;
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                                word-wrap: break-word;">
+                                <?php echo $task->task_desc; ?></td>
+                            <td>
+                                <?php echo $task->trainee; ?>
+                            </td>
+                            <td>
+                                <?php echo $task->duedate; ?>
+                            </td>
+                            <td class="tasksbtn"><button type="submit">
+                                    <?php if ($task->status == 'Not Started'): ?>
+                                        <img src="<?php echo $notstarted; ?>" alt="">
+                                        <?php echo $task->status; ?>
+                                    <?php elseif ($task->status == 'In Progress'): ?>
+                                        <img src="<?php echo $progress; ?>" alt="">
+                                        <?php echo $task->status; ?>
+                                    <?php elseif ($task->status == 'Completed'): ?>
+                                        <img src="<?php echo $completed; ?>" alt="">
+                                        <?php echo $task->status; ?>
+                                    <?php endif; ?>
+                                </button></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php } ?>
                 </tbody>
             </table>
         </div>

@@ -29,25 +29,45 @@ if(isset($_POST['logout'])){
 }
 
 $user_logged_in = wp_get_current_user();
+$user_role = get_user_meta($user_logged_in->ID, 'wp_capabilities', true);
+$user_role = array_keys($user_role)[0];
 
 //GET TOTAL USERS
 $total_users = count_total_users();
 
 //get total project managers
-// $total_pm = count_total_project_managers();
+$total_pm = count_total_project_managers();
 
 //get total trainers
-// $total_trainers = count_total_trainers();
+$total_trainers = count_total_trainers();
 
 //get total trainees
-// $total_trainees = count_total_trainees();
+$total_trainees = count_total_trainees();
 
 //get total tasks
-// $total_tasks = count_total_tasks();
+$total_tasks = count_total_tasks();
 
 ?>
 
-<?php get_header(); ?>
+<?php
+// $curr_user = wp_get_current_user();
+// $email = $curr_user->user_email;
+// $password = $curr_user->user_pass;
+// $role = $curr_user->roles[0];
+
+// // var_dump($email, $password, $role);
+
+// if($curr_user != 'administrator'){
+//     // echo "You are not authorized to view this page.";
+//     wp_redirect('http://localhost/easy-manage/404.php');
+//     exit;
+// }
+?>
+<?php get_header();
+
+// $token = $_COOKIE['token'];
+// var_dump($token)
+?>
 
 <div class="page">
     <div class="sidebar">
@@ -112,7 +132,7 @@ $total_users = count_total_users();
                     <img src="<?php echo $account; ?>" alt="">
                     <div class="profile">
                         <h4><?php echo $user_logged_in->user_login; ?></h4>
-                        <p><?php echo $user_logged_in->user_login; ?></p>
+                        <p><?php echo $user_role; ?></p>
                     </div>
                 </div>
             </nav>
@@ -141,7 +161,7 @@ $total_users = count_total_users();
                     </section>
                     <section class="tasks-nums">
                         <p>Project Managers</p>
-                        <h3><?php //echo $total_pm; ?> Project Managers</h5>
+                        <h3><?php echo $total_pm; ?> Project Managers</h5>
                     </section>
                 </div>
                 <div class="admin-tasks-count shadow-sm">
@@ -150,7 +170,7 @@ $total_users = count_total_users();
                     </section>
                     <section class="tasks-nums">
                         <p>Total Trainers</p>
-                        <h3><?php //echo $total_trainers; ?> Trainers</h5>
+                        <h3><?php echo $total_trainers; ?> Trainers</h5>
                     </section>
                 </div>
                 <div class="admin-tasks-count shadow-sm">
@@ -159,7 +179,7 @@ $total_users = count_total_users();
                     </section>
                     <section class="tasks-nums">
                         <p>Total Trainees</p>
-                        <h3><?php //echo $total_trainees; ?> Trainees</h5>
+                        <h3><?php echo $total_trainees; ?> Trainees</h5>
                     </section>
                 </div>
                 <div class="admin-tasks-count shadow-sm">
@@ -168,7 +188,7 @@ $total_users = count_total_users();
                     </section>
                     <section class="tasks-nums">
                         <p>Total Tasks Created</p>
-                        <h3><?php //echo $total_tasks; ?> Tasks</h5>
+                        <h3><?php echo $total_tasks; ?> Tasks</h5>
                     </section>
                 </div>
             </div>
@@ -203,16 +223,15 @@ $total_users = count_total_users();
                     $email = $user->user_email;
                     $display_name = $user->display_name;
                     
-                    // Retrieve user role from wp_usermeta table
-                    $user_role = get_user_meta($user->ID, 'role');
-                    $role = reset($user_role);
+                    $users_role = get_user_meta($user->ID, 'wp_capabilities', true);
+                    $users_role = array_keys($users_role)[0];
 
                     // Retrieve creator from wp_usermeta table
                     $creator_email = get_user_meta($user->ID, 'created_by');
                     $creator = reset($creator_email);
 
                     // Retrieve the creator's ID from user meta data
-                    // $creator_id = get_user_meta($user->ID, 'creator_id', true);
+                    // $creator_id = $user->ID;
 
                     // // Retrieve the role of the creator
                     // $creator_role = '';
@@ -223,7 +242,7 @@ $total_users = count_total_users();
                     <tr>
                         <td><?php echo $display_name; ?></td>
                         <td><?php echo $email; ?></td>
-                        <td><?php echo $role; ?></td>
+                        <td><?php echo $users_role; ?></td>
                         <td><?php echo $creator; ?></td>
                     </tr>
                     <?php } ?>

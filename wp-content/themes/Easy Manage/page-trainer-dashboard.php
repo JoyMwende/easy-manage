@@ -30,10 +30,20 @@ if(isset($_POST['logout'])){
 global $wpdb; 
 
 $user_logged_in = wp_get_current_user();
-$user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
-    FROM {$wpdb->users} AS users
-    LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-    LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE id = $user_logged_in->ID")
+$user_role = get_user_meta($user_logged_in->ID, 'wp_capabilities', true);
+$user_role = array_keys($user_role)[0];
+
+$total_trainees = count_total_trainees_trainer();
+
+$total_tasks = count_total_tasks_trainer();
+
+$total_submitted_tasks = count_total_submitted_tasks();
+
+$total_tasks_in_progress = count_total_tasks_in_progress();
+
+$latest_created_tasks = fetch_latest_created_tasks();
+
+$latest_submitted_tasks = fetch_latest_submitted_tasks();
 
 ?>
 <?php get_header(); ?>
@@ -87,7 +97,7 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     <img src="<?php echo $account; ?>" alt="">
                     <div class="profile">
                         <h5><?php echo $user_logged_in->user_login; ?></h5>
-                        <p><?php echo $user_role->role; ?></p>
+                        <p><?php echo $user_role; ?></p>
                     </div>
             </div>
         </div>
@@ -123,7 +133,7 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     </section>
                     <section class="tasks-nums">
                         <p>Total Trainees</p>
-                        <h3>20 Trainees</h5>
+                        <h3><?php echo $total_trainees; ?> Trainees</h5>
                     </section>
                 </div>
                 <div class="tasks-count shadow-sm">
@@ -132,7 +142,7 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     </section>
                     <section class="tasks-nums">
                         <p>Total Tasks</p>
-                        <h3>30 Tasks</h5>
+                        <h3><?php echo $total_tasks; ?> Tasks</h5>
                     </section>
                 </div>
                 <div class="tasks-count shadow-sm">
@@ -141,7 +151,7 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     </section>
                     <section class="tasks-nums">
                         <p>Submitted Tasks</p>
-                        <h3>21 Tasks</h5>
+                        <h3><?php echo $total_submitted_tasks; ?> Tasks</h5>
                     </section>
                 </div>
                 <div class="tasks-count shadow-sm">
@@ -150,7 +160,7 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     </section>
                     <section class="tasks-nums">
                         <p>Tasks in Progress</p>
-                        <h3>9 Tasks</h5>
+                        <h3><?php echo $total_tasks_in_progress; ?> Tasks</h5>
                     </section>
                 </div>
             </div>
@@ -159,8 +169,8 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                 <h3>Total Tasks</h3>
                 <div class="big-circle">
                     <div class="small-circle">
-                        <h5>30</h5>
-                        <p>projects</p>
+                        <h5><?php echo $total_tasks; ?></h5>
+                        <p>Tasks</p>
                     </div>
                 </div>
                 <div class="tasks-details">
@@ -179,27 +189,15 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                 <div>
                     <h3>Latest Submitted Tasks</h3>
                 </div>
+                <?php foreach($latest_submitted_tasks as $latest_submitted_task){ ?>
                 <div class="newest">
                     <img src="<?php echo $completedDark; ?>" alt="">
                     <div class="newest-content">
-                        <h5>Task Name</h5>
-                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit...</p>
+                        <h5><?php echo $latest_submitted_task->task_title; ?></h5>
+                        <p><?php echo $latest_submitted_task->task_desc; ?></p>
                     </div>
                 </div>
-                <div class="newest">
-                    <img src="<?php echo $completedDark; ?>" alt="">
-                    <div class="newest-content">
-                        <h5>Task Name</h5>
-                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit...</p>
-                    </div>
-                </div>
-                <div class="newest">
-                    <img src="<?php echo $completedDark; ?>" alt="">
-                    <div class="newwest-content">
-                        <h5>Task Name</h5>
-                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit...</p>
-                    </div>
-                </div>
+                <?php } ?>
             </div>
         </div>
 
@@ -215,21 +213,13 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     </tr>
                 </thead>
                 <tbody>
+                    <?php foreach($latest_created_tasks as $task){ ?>
                     <tr>
-                        <td>Sample Title</td>
-                        <td>Lorem ipsum dolor sit amet, consectetur adipiscing elit</td>
-                        <td>15/06/2023</td>
+                        <td><?php echo $task->task_title; ?></td>
+                        <td><?php echo $task->task_desc; ?></td>
+                        <td><?php echo $task->duedate; ?></td>
                     </tr>
-                    <tr>
-                        <td>Sample Title</td>
-                        <td>Lorem ipsum dolor sit amet, consectetur adipiscing elit</td>
-                        <td>15/06/2023</td>
-                    </tr>
-                    <tr>
-                        <td>Sample Title</td>
-                        <td>Lorem ipsum dolor sit amet, consectetur adipiscing elit</td>
-                        <td>15/06/2023</td>
-                    </tr>
+                    <?php } ?>
                 </tbody>
             </table>
         </div>

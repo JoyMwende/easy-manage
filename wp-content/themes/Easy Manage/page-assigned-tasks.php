@@ -15,6 +15,7 @@ $logoutDark = get_template_directory_uri() . "/assets/logout-dark.png";
 $completed = get_template_directory_uri() . "/assets/completed.png";
 $progress = get_template_directory_uri() . "/assets/progress.png";
 $account = get_template_directory_uri() . "/assets/account.png";
+$notstarted = get_template_directory_uri() . "/assets/not-started.png";
 
 
 if(isset($_POST['logout'])){
@@ -25,11 +26,74 @@ if(isset($_POST['logout'])){
 global $wpdb;
 
 $user_logged_in = wp_get_current_user();
-$user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
-    FROM {$wpdb->users} AS users
-    LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-    LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE id = $user_logged_in->ID")
+$user_role = get_user_meta($user_logged_in->ID, 'wp_capabilities', true);
+$user_role = array_keys($user_role)[0];
 
+$assigned_tasks = get_assigned_tasks();
+
+if(isset($_POST['markstartedbtn'])){
+    $token = $_COOKIE['token'];
+    $task_id = $_POST['id'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v3/assignedtasks/' . $task_id . '/markstarted';
+    $args = array(
+        'method' => 'PUT',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        echo 'User deactivated successfully';
+        $assigned_tasks = get_assigned_tasks();
+    } else {
+        echo 'Error deactivating user: ' . $response_code;
+    }
+}
+
+if(isset($_POST['markcompletebtn'])){
+    $token = $_COOKIE['token'];
+    $task_id = $_POST['id'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v3/assignedtasks/' . $task_id . '/markcomplete';
+    $args = array(
+        'method' => 'PUT',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        echo 'User deactivated successfully';
+        $assigned_tasks = get_assigned_tasks();
+    } else {
+        echo 'Error deactivating user: ' . $response_code;
+    }
+}
 
 ?>
 
@@ -86,7 +150,7 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     <img src="<?php echo $account; ?>" alt="">
                     <div class="profile">
                         <h3><?php echo $user_logged_in->user_login; ?></h3>
-                        <p><?php echo $user_role->role; ?></p>
+                        <p><?php echo $user_role; ?></p>
                     </div>
                 </div>
             </nav>
@@ -104,36 +168,36 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     </tr>
                 </thead>
                 <tbody class="tasks-body">
+                    <?php if(empty($assigned_tasks)){ ?>
+                        <tr>
+                            <td colspan="4" style="text-align: center;">No tasks assigned yet</td>
+                        </tr>
+                    <?php } else { foreach ($assigned_tasks as $assigned_task): ?>
                     <tr onclick="location.href='/easy-manage/trainee-single-task/';" style="cursor: pointer;">
-                        <td>Sample Title</td>
-                        <td>Lorem ipsum dolor sit amet, consectetur adipiscing elit</td>
-                        <td>15/06/2023</td>
+                        <td><?php echo $assigned_task->task_title; ?></td>
+                        <td><?php echo $assigned_task->task_desc; ?></td>
+                        <td><?php echo $assigned_task->duedate; ?></td>
                         <td class="tasksbtn">
-                            <button type="submit">
-                                <img src="<?php echo $completed; ?>" alt="">
-                                Start
-                            </button>
-                        </td>
-                    </tr>
-
-                    <tr onclick="location.href='/easy-manage/trainee-single-task/';" style="cursor: pointer;">
-                        <td>Sample Title</td>
-                        <td>Lorem ipsum dolor sit amet, consectetur adipiscing elit</td>
-                        <td>15/06/2023</td>
-                        <td class="tasksbtn"><button type="submit">
-                                <img src="<?php echo $progress; ?>" alt="">
-                                In progress
-                            </button></td>
-                    </tr>
-                    <tr onclick="location.href='/easy-manage/trainee-single-task/';" style="cursor: pointer;">
-                        <td>Sample Title</td>
-                        <td>Lorem ipsum dolor sit amet, consectetur adipiscing elit</td>
-                        <td>15/06/2023</td>
-                        <td class="tasksbtn"><button type="submit">
-                                <img src="<?php echo $completed; ?>" alt="">
-                                Start
-                            </button></td>
-                    </tr>
+                            <form action="" method="post">
+                                    <input type="hidden" name="id" value="<?php echo $assigned_task->id; ?>">
+                                    <?php if ($assigned_task->status == 'Not Started') { ?>
+                                        <button type="submit" name="markstartedbtn">
+                                            <img src="<?php echo $notstarted; ?>" alt="">
+                                            <?php echo $assigned_task->status; ?>
+                                        </button>
+                                    <?php } else if ($assigned_task->status == 'In Progress') { ?>
+                                            <button type="submit" name="markcompletebtn">
+                                                <img src="<?php echo $progress; ?>" alt="">
+                                                <?php echo $assigned_task->status; ?>
+                                            </button>
+                                        <?php } else {
+                                        echo "Invalid status";
+                                    } ?>
+                                </form>
+                                </td>
+                            </tr>
+                    <?php endforeach; ?>
+                    <?php } ?>
                 </tbody>
             </table>
         </div>

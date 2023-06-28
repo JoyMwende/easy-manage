@@ -17,7 +17,7 @@ $logoutDark = get_template_directory_uri() . "/assets/logout-dark.png";
 $activate = get_template_directory_uri() . "/assets/activate.png";
 $deactivate = get_template_directory_uri() . "/assets/deactivate.png";
 
-$search = get_template_directory_uri() . "/assets/search.png";
+$searchimg = get_template_directory_uri() . "/assets/search.png";
 $totalTasks = get_template_directory_uri() . "/assets/total tasks.png";
 $group = get_template_directory_uri() . "/assets/group.png";
 $progress = get_template_directory_uri() . "/assets/progress.png";
@@ -28,41 +28,100 @@ if (isset($_POST['logout'])) {
     wp_redirect('/easy-manage/login');
 }
 
-$users_per_page = 5;
-$current_page = isset($_GET['page']) ? absint($_GET['page']) : 1;
-$offset = ($current_page - 1) * $users_per_page;
+// $users_per_page = 5;
+// $current_page = isset($_GET['page']) ? absint($_GET['page']) : 1;
+// $offset = ($current_page - 1) * $users_per_page;
 
-$args = array(
-    'orderby' => 'user_registered',
-    'order' => 'DESC',
-    'number' => $users_per_page,
-    'offset' => $offset,
-);
+// $args = array(
+//     'orderby' => 'user_registered',
+//     'order' => 'DESC',
+//     'number' => $users_per_page,
+//     'offset' => $offset,
+// );
 
-$users_query = new WP_User_Query($args);
-$users = $users_query->get_results();
+// $users_query = new WP_User_Query($args);
+// $no_users = $users_query->get_results();
 
-$total_users = $users_query->get_total();
-$total_pages = ceil($total_users / $users_per_page);
+// $total_users = $users_query->get_total();
+// $total_pages = ceil($total_users / $users_per_page);
 
 
-global $wpdb;
-
-$query = "
-        SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
-        FROM {$wpdb->users} AS users
-        LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-        LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role'
-    ";
-
-$users = $wpdb->get_results($query);
+$users = fetch_users();
 
 $user_logged_in = wp_get_current_user();
-$user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
-    FROM {$wpdb->users} AS users
-    LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-    LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE id = $user_logged_in->ID")
+$user_role = get_user_meta($user_logged_in->ID, 'wp_capabilities', true);
+$user_role = array_keys($user_role)[0];
 
+if (isset($_POST['activatebtn'])) {
+    $token = $_COOKIE['token'];
+    $user_id = $_POST['ID'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v1/users/' . $user_id . '/activate';
+    $args = array(
+        'method' => 'PUT',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        echo 'User activated successfully';
+        $users = fetch_users();
+    } else {
+        echo 'Error activating user: ' . $response_code;
+       
+    }
+}
+
+if (isset($_POST['deactivatebtn'])) {
+    $token = $_COOKIE['token'];
+    $user_id = $_POST['ID'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v1/users/' . $user_id . '/deactivate';
+    $args = array(
+        'method' => 'PUT',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        echo 'User deactivated successfully';
+        $users = fetch_users();
+    } else {
+        echo 'Error deactivating user: ' . $response_code;
+    }
+}
+
+
+if(isset($_GET['search'])){
+    $users = admin_search_users();
+     
+}
 
 ?>
 <?php get_header(); ?>
@@ -119,14 +178,20 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
         <div class="main-trainee-nav">
             <nav class="trainee-nav">
                 <div class="trainee-welcome-text">
-                    <h3>Welcome, <?php echo $user_logged_in->user_login; ?></h3>
+                    <h3>Welcome,
+                        <?php echo $user_logged_in->user_login; ?>
+                    </h3>
                     <p>Today is Saturday, 10 June 2023</p>
                 </div>
                 <div class="account">
                     <img src="<?php echo $account; ?>" alt="">
                     <div class="profile">
-                        <h4><?php echo $user_logged_in->user_login; ?></h4>
-                        <p><?php echo $user_logged_in->user_login; ?></p>
+                        <h4>
+                            <?php echo $user_logged_in->user_login; ?>
+                        </h4>
+                        <p>
+                            <?php echo $user_role; ?>
+                        </p>
                     </div>
                 </div>
             </nav>
@@ -134,9 +199,19 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
         <hr>
 
         <div class="search-bar mb-1">
-            <img src="<?php echo $search; ?>" alt="">
-            <input type="search" name="search" id="search" placeholder="Search trainees, trainers, project managers etc.">
+            <form action="" method="get">
+                <label for="search">
+                    <img src="<?php echo $searchimg; ?>" alt="" onclick="performSearch()">
+                </label>
+                <input type="search" name="search" id="search" placeholder="Search any user">
+            </form>
         </div>
+        
+        <script>
+            function performSearch() {
+                document.querySelector('form').submit();
+            }
+        </script>
 
         <div class="assigned-tasks-table">
             <h3>Trainers</h3>
@@ -151,42 +226,50 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     </tr>
                 </thead>
                 <tbody class="tasks-body">
-                    <?php
-                    foreach ($users as $user) {
-                    ?>
+                    <?php if(empty($users)){ ?>
                         <tr>
-                            <td><?php echo $user->firstname; ?></td>
-                            <td><?php echo $user->lastname; ?></td>
-                            <td><?php echo $user->email; ?></td>
-                            <td><?php echo $user->role; ?></td>
+                            <td colspan="5" style="text-align: center;">No users found</td>
+                        </tr>
+                    <?php } else {
+                    foreach ($users as $user) {
+                        ?>
+                        <tr>
+                            <td>
+                                <?php echo $user->firstname; ?>
+                            </td>
+                            <td>
+                                <?php echo $user->lastname; ?>
+                            </td>
+                            <td>
+                                <?php echo $user->email; ?>
+                            </td>
+                            <td>
+                                <?php echo $user->role; ?>
+                            </td>
                             <td class="tasksbtn">
                                 <form action="" method="post">
-                                    <button type="submit">
-                                        <img src="<?php echo $activate; ?>" alt="">
-                                        Activate
-                                    </button>
+                                    <input type="hidden" name="ID" value="<?php echo $user->ID; ?>">
+                                    <?php if ($user->is_active == 1 && $user->is_deleted == 0) { ?>
+                                        <button type="submit" name="deactivatebtn">
+                                            <img src="<?php echo $deactivate; ?>" alt="">
+                                            Deactivate
+                                        </button>
+                                    <?php } else if ($user->is_active == 0 && $user->is_deleted == 0) { ?>
+                                            <button type="submit" name="activatebtn">
+                                                <img src="<?php echo $activate; ?>" alt="">
+                                                Activate
+                                            </button>
+                                        <?php } else {
+                                        echo "Invalid status";
+                                    } ?>
                                 </form>
+
                             </td>
                         </tr>
                     <?php } ?>
+                    <?php } ?>
                 </tbody>
             </table>
-        </div>
-
-        <!-- Pagination -->
-        <div class="pagination">
-            <?php
-            $paginate_args = array(
-                'base' => add_query_arg('page', '%#%'),
-                'format' => '',
-                'total' => $total_pages,
-                'current' => $current_page,
-                'prev_text' => '&laquo;',
-                'next_text' => '&raquo;',
-                'type' => 'plain',
-            );
-            echo paginate_links($paginate_args);
-            ?>
         </div>
 
     </div>

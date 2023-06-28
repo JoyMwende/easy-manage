@@ -36,7 +36,8 @@ $successmsg = false;
 $errormsg = false;
 
 $user_logged_in = wp_get_current_user();
-// $user_logged_data = $user_logged_in->user_login. ' ' . $user_logged_in->last_name;
+$user_role = get_user_meta($user_logged_in->ID, 'wp_capabilities', true);
+$user_role = array_keys($user_role)[0];
 
 if (isset($_POST['createpmbtn'])) {
     $firstname = $_POST['firstname'];
@@ -64,7 +65,7 @@ if (isset($_POST['createpmbtn'])) {
 
     if (empty($firstnameError) && empty($lastnameError) && empty($emailError) && empty($roleError) && empty($passwordError)) {
 
-        $token = isset($GLOBALS['token']) ? $GLOBALS['token'] : '';
+        $token = isset($_COOKIE['token']) ? $_COOKIE['token'] : '';
 
     
         if (!empty($token)) {
@@ -183,7 +184,7 @@ if (isset($_POST['createpmbtn'])) {
                             <?php echo $user_logged_in->user_login; ?>
                         </h4>
                         <p>
-                            <?php echo $user_logged_in->user_login; ?>
+                            <?php echo $user_role; ?>
                         </p>
                     </div>
                 </div>

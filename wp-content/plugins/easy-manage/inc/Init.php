@@ -19,7 +19,8 @@
                 Pages\TrainerRoutes::class,
                 Pages\PmRoutes::class,
                 Pages\Tables::class,
-                Pages\CohortRoutes::class
+                Pages\CohortRoutes::class,
+                // Pages\Login::class,
             ];
         }
     

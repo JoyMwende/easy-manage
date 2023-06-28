@@ -23,10 +23,10 @@ if(isset($_POST['logout'])){
 global $wpdb;
 
 $user_logged_in = wp_get_current_user();
-$user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_email AS email, meta1.meta_value AS lastname, meta2.meta_value AS role
-    FROM {$wpdb->users} AS users
-    LEFT JOIN {$wpdb->usermeta} AS meta1 ON meta1.user_id = users.ID AND meta1.meta_key = 'last_name'
-    LEFT JOIN {$wpdb->usermeta} AS meta2 ON meta2.user_id = users.ID AND meta2.meta_key = 'role' WHERE id = $user_logged_in->ID")
+$user_role = get_user_meta($user_logged_in->ID, 'wp_capabilities', true);
+$user_role = array_keys($user_role)[0];
+
+$completed_tasks = get_completed_tasks();
 
 
 ?>
@@ -84,7 +84,7 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                     <img src="<?php echo $account; ?>" alt="">
                     <div class="profile">
                         <h3><?php echo $user_logged_in->user_login; ?></h3>
-                        <p><?php echo $user_role->role; ?></p>
+                        <p><?php echo $user_role; ?></p>
                     </div>
                 </div>
             </nav>
@@ -101,34 +101,37 @@ $user_role = $wpdb->get_row("SELECT users.user_login AS firstname, users.user_em
                         <th>Status</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr onclick="location.href='/easy-manage/trainee-single-task/';" style="cursor: pointer;">
-                        <td>Sample Title</td>
-                        <td>Lorem ipsum dolor sit amet, consectetur adipiscing elit</td>
-                        <td>15/06/2023</td>
-                        <td class="tasksbtn"><button type="submit">
-                                <img src="<?php echo $completed; ?>" alt="">
-                                Completed
-                            </button></td>
-                    </tr>
-                    <tr onclick="location.href='/easy-manage/trainee-single-task/';" style="cursor: pointer;">
-                        <td>Sample Title</td>
-                        <td>Lorem ipsum dolor sit amet, consectetur adipiscing elit</td>
-                        <td>15/06/2023</td>
-                        <td class="tasksbtn"><button type="submit">
-                                <img src="<?php echo $completed; ?>" alt="">
-                                Completed
-                            </button></td>
-                    </tr>
-                    <tr onclick="location.href='/easy-manage/trainee-single-task/';" style="cursor: pointer;">
-                        <td>Sample Title</td>
-                        <td>Lorem ipsum dolor sit amet, consectetur adipiscing elit</td>
-                        <td>15/06/2023</td>
-                        <td class="tasksbtn"><button type="submit">
-                                <img src="<?php echo $completed; ?>" alt="">
-                                Completed
-                            </button></td>
-                    </tr>
+                <tbody class="tasks-body">
+                    <?php if (empty($completed_tasks)) { ?>
+            <div class="bg-light h-75 d-flex justify-content-center align-items-center">
+                <h2 class="text-center">No Completed Tasks</h2>
+            </div>
+                    <?php 
+                    } else {
+                    foreach ($completed_tasks as $completed_task): ?>
+                        <tr onclick="location.href='/easy-manage/trainee-single-task/';" style="cursor: pointer;">
+                            <td>
+                                <?php echo $completed_task->task_title; ?>
+                            </td>
+                            <td>
+                                <?php echo $completed_task->task_desc; ?>
+                            </td>
+                            <td>
+                                <?php echo $completed_task->duedate; ?>
+                            </td>
+                            <td class="tasksbtn">
+                                <button type="submit">
+                                    <?php if ($completed_task->status == 'Completed'): ?>
+                                        <img src="<?php echo $completed; ?>" alt="">
+                                        <?php echo $completed_task->status; ?>
+                                    <?php else:
+                                        echo "Error occurred"; ?>
+                                    <?php endif; ?>
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php } ?>
                 </tbody>
             </table>
         </div>
