@@ -89,7 +89,7 @@ if (isset($_POST['createtraineebtn'])) {
                 'lastname' => $lastname,
                 'email' => $email,
                 'role' => $role,
-                'cohort_name' => $cohort,
+                'cohort' => $cohort,
                 'password' => $password,
             );
 
@@ -289,16 +289,10 @@ if (isset($_POST['createtraineebtn'])) {
                         <div class="add-field">
                             <label>Cohort<span style="color: red;">*</span></label>
                             <div class="input">
-                                <select name="cohort" class="">
-                                    <?php
-                                    foreach ($cohorts as $cohort):
-                                        $name = $cohort->cohort_name; ?>
-                                        <option>
-                                            <?php echo $name; ?>
-                                        </option>
-                                
-                                    <?php endforeach; ?>
-                                </select>
+                                <?php
+                                $cohort_value = get_stack();
+                                ?>
+                                <input type="text" name="cohort" id="cohort" value="<?php echo $cohort_value; ?>" readonly>
                                 <span class="error" style="color: red;">
                                     <?php if ($cohortError) {
                                         echo $cohortError;
@@ -306,6 +300,23 @@ if (isset($_POST['createtraineebtn'])) {
                                 </span>
                             </div>
                         </div>
+                        <!-- <div class="add-field">
+                            <label>Cohort<span style="color: red;">*</span></label>
+                            <div class="input">
+                                <select name="cohort" >
+                                    <?php
+                                    //$cohort_value = get_stack();
+                                    ?>
+                                        <option value="<?php //echo $cohort_value; ?>">
+                                            <?php //echo $cohort_value; ?>
+                                        </option>
+                                </select>
+                                <span class="error" style="color: red;">
+                                    <?php //o $cohortError;
+                                    //} ?>
+                                </span>
+                            </div>
+                        </div> -->
                         <div class="add-field">
                             <label>Role<span style="color: red;">*</span></label>
                             <div class="input">
