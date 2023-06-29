@@ -216,7 +216,7 @@ if (isset($_POST['createpmbtn'])) {
                 </script>';
             <?php endif;
             ?>
-            <div class="add-content shadow-sm d-flex flex-column bg-light p-4">
+            <div class="add-content shadow-sm d-flex flex-column bg-light p-4 mb-5">
                 <form action="" method="post">
                     <h2 class="text-center">Add New Project Manager</h2>
                     <p style="color: red;"><span class="error">* required field</span></p>
@@ -278,7 +278,7 @@ if (isset($_POST['createpmbtn'])) {
                                     </span>
                                 </div>
                             </div>
-                            <div class="add-btn-pm mt-2">
+                            <div class="add-btn-pm mt-2" style="margin-top: 30px;">
                                 <button type="submit" name="createpmbtn">CREATE PROJECT MANAGER</button>
                             </div>
                         </div>

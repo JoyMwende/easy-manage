@@ -1706,3 +1706,37 @@ function newest_tasks()
         return 'No users found';
     }
 }
+
+function get_stack()
+{
+    $token = $_COOKIE['token'];
+
+    $url = 'http://localhost/easy-manage/wp-json/easymanage/v4/mystack';
+    $args = array(
+        'method' => 'GET',
+        'headers' => array(
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type' => 'application/json'
+        )
+    );
+
+    $response = wp_remote_request($url, $args);
+
+    if (is_wp_error($response)) {
+        $error_message = $response->get_error_message();
+        echo 'Error: ' . $error_message;
+        return;
+    }
+
+    $response_code = wp_remote_retrieve_response_code($response);
+    $response_body = wp_remote_retrieve_body($response);
+
+    if ($response_code === 200) {
+        $data = json_decode($response_body);
+        return $data;
+    } else {
+        echo 'Error: ' . $response_code . '<br>';
+        echo 'Response Body: ' . $response_body . '<br>';
+        return 'No users found';
+    }
+}

@@ -136,7 +136,7 @@ if (isset($_GET['search'])) {
                         <th>First Name</th>
                         <th>Second Name</th>
                         <th>Email</th>
-                        <!-- <th>Cohort</th> -->
+                        <th>Cohort Training</th>
                     </tr>
                 </thead>
                 <tbody class="tasks-body">
@@ -149,7 +149,7 @@ if (isset($_GET['search'])) {
                         <td><?php echo $trainer->firstname; ?></td>
                         <td><?php echo $trainer->lastname; ?></td>
                         <td><?php echo $trainer->email; ?></td>
-                        <!-- <td><?php //echo $trainer->cohort; ?></td> -->
+                        <td><?php echo $trainer->cohort_name; ?></td>
                     </tr>
                     <?php endforeach; ?>
                     <?php } ?>

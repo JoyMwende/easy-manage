@@ -238,7 +238,7 @@ $user_role = array_keys($user_role)[0];
                 </script>
             <?php endif; ?>
 
-            <div class="add-content shadow-sm d-flex flex-column bg-light p-4">
+            <div class="add-content shadow-sm d-flex flex-column bg-light p-4 mb-5">
                 <form action="" method="post">
                     <h2 class="text-center">Add New Task</h2>
                     <p style="color: red;"><span class="error">* required field</span></p>

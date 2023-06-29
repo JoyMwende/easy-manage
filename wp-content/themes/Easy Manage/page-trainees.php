@@ -16,7 +16,7 @@ $addTraineeDark = get_template_directory_uri() . "/assets/add-user-dark.png";
 $plus = get_template_directory_uri() . "/assets/add.png";
 $logoutDark = get_template_directory_uri() . "/assets/logout-dark.png";
 
-$search = get_template_directory_uri() . "/assets/search.png";
+$searchimg = get_template_directory_uri() . "/assets/search.png";
 $totalTasks = get_template_directory_uri() . "/assets/total tasks.png";
 $group = get_template_directory_uri() . "/assets/group.png";
 $progress = get_template_directory_uri() . "/assets/progress.png";

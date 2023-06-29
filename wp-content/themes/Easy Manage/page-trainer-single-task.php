@@ -95,7 +95,7 @@ $task = trainer_get_single_task();
     </div>
 
 
-    <div class="page-content">
+    <div class="page-content" style="height: 85vh;">
         <div class="main-trainee-nav">
             <nav class="trainee-nav">
                 <div class="trainee-welcome-text">

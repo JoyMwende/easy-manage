@@ -27,11 +27,13 @@ if(isset($_POST['logout'])){
     wp_logout();
     wp_redirect('/easy-manage/login');
 }
-global $wpdb; 
 
 $user_logged_in = wp_get_current_user();
 $user_role = get_user_meta($user_logged_in->ID, 'wp_capabilities', true);
 $user_role = array_keys($user_role)[0];
+
+$my_stack = get_stack();
+
 
 $total_trainees = count_total_trainees_trainer();
 
@@ -125,6 +127,7 @@ $latest_submitted_tasks = fetch_latest_submitted_tasks();
 
         <hr>
 
+        <h4 class="text-center pb-2">You are a <?php echo $my_stack; ?> Trainer</h4>
         <div class="trainee-content">
             <div class="tasks-count-box">
                 <div class="tasks-count shadow-sm">
@@ -166,7 +169,7 @@ $latest_submitted_tasks = fetch_latest_submitted_tasks();
             </div>
 
             <div class="tasks-analysis">
-                <h3>Total Tasks</h3>
+                <h4>Total Tasks</h4>
                 <div class="big-circle">
                     <div class="small-circle">
                         <h5><?php echo $total_tasks; ?></h5>
@@ -187,7 +190,7 @@ $latest_submitted_tasks = fetch_latest_submitted_tasks();
 
             <div class="newest-tasks">
                 <div>
-                    <h3>Latest Submitted Tasks</h3>
+                    <h4>Latest Submitted Tasks</h4>
                 </div>
                 <?php foreach($latest_submitted_tasks as $latest_submitted_task){ ?>
                 <div class="newest">

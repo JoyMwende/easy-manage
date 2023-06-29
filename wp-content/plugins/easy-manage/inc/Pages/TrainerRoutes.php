@@ -292,8 +292,42 @@ class TrainerRoutes
             )
         );
 
+        register_rest_route(
+            'easymanage/v4',
+            '/mystack/',
+            array(
+                'methods' => 'GET',
+                'callback' => array($this, 'get_my_cohort'),
+                'permission_callback' => function () {
+                    return current_user_can('trainer');
+                }
+            )
+        );
+
     }
 
+
+    public function get_my_cohort()
+    {
+        global $wpdb;
+        $user_logged_in = wp_get_current_user();
+        $user_lname = get_user_meta($user_logged_in->ID, 'last_name', true);
+        $user_data = $user_logged_in->user_login . " " . $user_lname;
+
+        $cohort_name = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT cohort_name FROM {$wpdb->prefix}cohorts WHERE cohort_trainer = %s",
+                $user_data
+            )
+        );
+
+        if ($cohort_name) {
+            return $cohort_name;
+        } else {
+            return new \WP_Error('cant-get', 'Cannot get cohort', array('status' => 500));
+        }
+
+    }
 
     public function search_users($request)
     {
@@ -343,9 +377,12 @@ class TrainerRoutes
 
     public function get_trainees()
     {
+        $user_logged_in = wp_get_current_user();
+        $user_lname = get_user_meta($user_logged_in->ID, 'last_name', true);
+        $user_data = $user_logged_in->user_login . " " . $user_lname;
+
         $args = array(
             'role' => 'trainee',
-            // Specify the desired role
             'orderby' => 'registered',
             'order' => 'DESC',
             'meta_query' => array(
@@ -361,6 +398,11 @@ class TrainerRoutes
                     'value' => 1,
                     'compare' => '=',
                     'type' => 'NUMERIC',
+                ),
+                array(
+                    'key' => 'created_by',
+                    'value' => $user_data,
+                    'compare' => '=',
                 ),
             ),
         );
@@ -555,9 +597,49 @@ class TrainerRoutes
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'tasks';
         $trainer_logged_in = wp_get_current_user();
-        $created_by = $trainer_logged_in->first_name . ' ' . $trainer_logged_in->last_name;
+        $user_lname = get_user_meta($trainer_logged_in->ID, 'last_name', true);
+        $user_data = $trainer_logged_in->user_login . " " . $user_lname;
+
+        $trainer_stack = $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT cohort_name FROM {$wpdb->prefix}cohorts WHERE cohort_trainer = %s",
+                $user_data
+            )
+        );       
+
+        $trainee_stack = '';
+        $trainee_data = '';
+
+            $trainee_id = $request->get_param('id');
+        $trainee = get_user_by('ID', $trainee_id);
+
+        if ($trainee) {
+            $trainee_data = array(
+                'id' => $trainee->ID,
+                'firstname' => $trainee->user_login,
+                'user_email' => $trainee->user_email,
+                'lastname' => get_user_meta($trainee->ID, 'last_name', true),
+                'cohort' => get_user_meta($trainee_id, 'cohort', true),
+                'created_by' => get_user_meta($trainee_id, 'created_by', true),
+                'role' => $trainee->roles[0],
+            );
+
+            $trainee_stack = $trainee_data;
+
+            if (empty($trainee_stack)) {
+                return new \WP_Error('cant-create', 'Cannot create task for trainee without a cohort', array('status' => 500));
+            }
+            print_r($trainer_stack);
+            print_r($trainee_stack);
+
+            if ($trainer_stack !== $trainee_stack) {
+                return new \WP_Error('cant-create', 'Cannot create task for trainee outside your cohort', array('status' => 500));
+            }
+        }
+
+        $table = $wpdb->prefix . 'tasks';
+        $created_by = $trainer_logged_in->user_login . ' ' . $trainer_logged_in->last_name;
         $task_data = array(
             'task_title' => sanitize_text_field($request_data['task_title']),
             'task_desc' => sanitize_textarea_field($request_data['task_desc']),
@@ -573,6 +655,7 @@ class TrainerRoutes
             return new \WP_Error('cant-create', 'Unable to create task.', array('status' => 500));
         }
     }
+
 
     private function get_assigned_tasks_count($trainee)
     {
@@ -678,7 +761,12 @@ class TrainerRoutes
     public function get_all_tasks()
     {
         global $wpdb;
-        $tasks = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}tasks");
+
+        $user_logged_in = wp_get_current_user();
+        $user_lname = get_user_meta($user_logged_in->ID, 'last_name', true);
+        $user_data = $user_logged_in->user_login . " " . $user_lname;
+
+        $tasks = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}tasks WHERE created_by = '$user_data' AND is_deleted = 0");
 
         if ($tasks) {
             return $tasks;

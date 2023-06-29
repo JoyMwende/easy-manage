@@ -86,7 +86,7 @@ $task = admin_get_single_task();
     </div>
 
 
-    <div class="page-content">
+    <div class="page-content" style="height: 85vh;" >
 
         <div class="main-trainee-nav">
             <nav class="trainee-nav">
@@ -137,16 +137,6 @@ $task = admin_get_single_task();
                                 <?php echo $task->status; ?> <?php endif; ?>
                     </button>
                 </div>
-            </div>
-            <div class="tasksmodifybtn">
-                <a href="/easy-manage/update-task" style="text-decoration: none;"><button type="submit">
-                    <img src="<?php echo $edit; ?>" alt="">
-                    Edit
-                </button></a>
-                <button type="submit" style="background-color: #F3DEDE; color: #DF5656;">
-                    <img src="<?php echo $delete; ?>" alt="">
-                    Delete
-                </button>
             </div>
         </div>
         

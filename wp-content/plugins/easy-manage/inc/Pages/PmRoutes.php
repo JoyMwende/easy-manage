@@ -4,15 +4,19 @@
  * @package Easy Manage Plugin
  */
 
- namespace Inc\Pages;
- use WP_Error;
+namespace Inc\Pages;
+
+use WP_Error;
 
 
- class PmRoutes{
-    public function register(){
+class PmRoutes
+{
+    public function register()
+    {
         add_action('rest_api_init', array($this, 'register_pm_routes'));
     }
-    public function register_pm_routes(){
+    public function register_pm_routes()
+    {
         register_rest_route(
             'easymanage/v2',
             '/trainers/',
@@ -280,8 +284,16 @@
 
         $trainer_list = array();
         foreach ($trainers as $trainer) {
-            $cohort_id = get_user_meta($trainer->ID, 'cohort', true);
-            $cohort_name = $wpdb->get_var($wpdb->prepare("SELECT cohort_name FROM {$wpdb->prefix}cohorts WHERE ID = %d", $cohort_id));
+            $user_login = $trainer->user_login;
+            $last_name = get_user_meta($trainer->ID, 'last_name', true);
+
+            $cohort_trainer = $user_login . ' ' . $last_name;
+
+            $cohort_name = $wpdb->get_var($wpdb->prepare(
+                "SELECT cohort_name FROM {$wpdb->prefix}cohorts WHERE cohort_trainer = %s", $cohort_trainer
+            )
+            );
+
 
             $trainer_data = array(
                 'id' => $trainer->ID,
@@ -305,26 +317,27 @@
 
 
 
-    public function get_trainer($request) {
+    public function get_trainer($request)
+    {
         $trainer_id = $request->get_param('id');
-    $trainer = get_user_by('ID', $trainer_id);
+        $trainer = get_user_by('ID', $trainer_id);
 
-    if ($trainer) {
-        $trainer_data = array(
-            'email' => $trainer->user_email,
-            'firstname' => $trainer->user_login,
-            'lastname' => $trainer->last_name,
-            'created_by' => get_user_meta($trainer_id, 'created_by', true),
-            'is_active' => get_user_meta($trainer_id, 'is_active', true),
-            'is_deleted' => get_user_meta($trainer_id, 'is_deleted', true),
-            'role' => $trainer->roles[0], 
-        );
+        if ($trainer) {
+            $trainer_data = array(
+                'email' => $trainer->user_email,
+                'firstname' => $trainer->user_login,
+                'lastname' => $trainer->last_name,
+                'created_by' => get_user_meta($trainer_id, 'created_by', true),
+                'is_active' => get_user_meta($trainer_id, 'is_active', true),
+                'is_deleted' => get_user_meta($trainer_id, 'is_deleted', true),
+                'role' => $trainer->roles[0],
+            );
 
-        return rest_ensure_response($trainer_data);
-    } else {
-        return new \WP_Error('trainer-not-found', 'Trainer not found', array('status' => 404));
+            return rest_ensure_response($trainer_data);
+        } else {
+            return new \WP_Error('trainer-not-found', 'Trainer not found', array('status' => 404));
+        }
     }
-}
 
     public function delete_trainer($request)
     {
@@ -392,7 +405,7 @@
         update_user_meta($trainer_id, 'created_by', $created_by);
         update_user_meta($trainer_id, 'cohort_assigned', $cohort_name);
 
-        
+
         $table = $wpdb->prefix . 'cohorts';
         $wpdb->update(
             $table,
@@ -460,55 +473,58 @@
 
 
 
-    public function get_trainees(){
+    public function get_trainees()
+    {
         $args = array(
-        'role'    => 'trainee', // Specify the desired role
-        'orderby' => 'registered',
-        'order'   => 'DESC',
-    );
-    
-    $trainees = get_users($args);
-    
-    $trainee_list = array();
-    foreach ($trainees as $trainee) {
-        $trainee_data = array(
-            'id'         => $trainee->ID,
-            'firstname'   => $trainee->user_login,
-            'email'      => $trainee->user_email,
-            'lastname'  => get_user_meta($trainee->ID, 'last_name', true),
-            'cohort'     => get_user_meta($trainee->ID, 'cohort', true),
-            'created_by' => get_user_meta($trainee->ID, 'created_by', true),
+            'role' => 'trainee',
+            // Specify the desired role
+            'orderby' => 'registered',
+            'order' => 'DESC',
         );
-        
-        $trainee_list[] = $trainee_data;
-    }
-        if($trainee_list){
+
+        $trainees = get_users($args);
+
+        $trainee_list = array();
+        foreach ($trainees as $trainee) {
+            $trainee_data = array(
+                'id' => $trainee->ID,
+                'firstname' => $trainee->user_login,
+                'email' => $trainee->user_email,
+                'lastname' => get_user_meta($trainee->ID, 'last_name', true),
+                'cohort' => get_user_meta($trainee->ID, 'cohort', true),
+                'created_by' => get_user_meta($trainee->ID, 'created_by', true),
+            );
+
+            $trainee_list[] = $trainee_data;
+        }
+        if ($trainee_list) {
             return $trainee_list;
         } else {
             return new \WP_Error('cant-get', 'Cant get trainee', array('status' => 500));
         }
     }
-    
 
-    public function get_trainee($request) {
+
+    public function get_trainee($request)
+    {
         $trainee_id = $request->get_param('id');
-    $trainee = get_user_by('ID', $trainee_id);
+        $trainee = get_user_by('ID', $trainee_id);
 
-    if ($trainee) {
-        $trainee_data = array(
-            'firstname' => $trainee->user_login,
-            'email' => $trainee->user_email,
-            'lastname' => $trainee->last_name,
-            'cohort' => get_user_meta($trainee_id, 'cohort', true),
-            'created_by' => get_user_meta($trainee_id, 'created_by', true),
-            'role' => $trainee->roles[0], // Assuming the trainee has only one role
-        );
+        if ($trainee) {
+            $trainee_data = array(
+                'firstname' => $trainee->user_login,
+                'email' => $trainee->user_email,
+                'lastname' => $trainee->last_name,
+                'cohort' => get_user_meta($trainee_id, 'cohort', true),
+                'created_by' => get_user_meta($trainee_id, 'created_by', true),
+                'role' => $trainee->roles[0], // Assuming the trainee has only one role
+            );
 
-        return rest_ensure_response($trainee_data);
-    } else {
-        return new \WP_Error('trainee-not-found', 'Trainee not found', array('status' => 404));
+            return rest_ensure_response($trainee_data);
+        } else {
+            return new \WP_Error('trainee-not-found', 'Trainee not found', array('status' => 404));
+        }
     }
-}
 
     public function get_deleted_trainers()
     {
